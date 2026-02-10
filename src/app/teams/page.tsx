@@ -24,7 +24,7 @@ export default function TeamsPage() {
       const [tRes, cRes] = await Promise.all([teamApi.getAll({ includePlayers: "true" }), adminApi.getCompetitions()]);
       setTeams(tRes.data.data || []);
       setCompetitions(cRes.data.data || []);
-    } catch { toast.error("Failed to load"); }
+    } catch { toast.error("فشل التحميل"); }
     finally { setLoading(false); }
   }, []);
 
@@ -35,16 +35,16 @@ export default function TeamsPage() {
 
   const handleSave = async () => {
     try {
-      if (editing) { await teamApi.update(editing.id, form); toast.success("Team updated"); }
-      else { await teamApi.create(form); toast.success("Team created"); }
+      if (editing) { await teamApi.update(editing.id, form); toast.success("تم تحديث الفريق"); }
+      else { await teamApi.create(form); toast.success("تم إنشاء الفريق"); }
       setShowModal(false); load();
-    } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
+    } catch (err: any) { toast.error(err.response?.data?.message || "فشل"); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this team?")) return;
-    try { await teamApi.delete(id); toast.success("Deleted"); load(); }
-    catch { toast.error("Failed to delete"); }
+    if (!confirm("حذف هذا الفريق؟")) return;
+    try { await teamApi.delete(id); toast.success("تم الحذف"); load(); }
+    catch { toast.error("فشل الحذف"); }
   };
 
   const openAddPlayer = (teamId: string) => { setPlayerTeamId(teamId); setEditingPlayer(null); setPlayerForm({ name: "", shirtNumber: 0, position: "Forward", imageUrl: "", nationality: "" }); setShowPlayerModal(true); };
@@ -52,16 +52,16 @@ export default function TeamsPage() {
 
   const handleSavePlayer = async () => {
     try {
-      if (editingPlayer) { await teamApi.updatePlayer(playerTeamId, editingPlayer.id, playerForm); toast.success("Player updated"); }
-      else { await teamApi.addPlayer(playerTeamId, playerForm); toast.success("Player added"); }
+      if (editingPlayer) { await teamApi.updatePlayer(playerTeamId, editingPlayer.id, playerForm); toast.success("تم تحديث اللاعب"); }
+      else { await teamApi.addPlayer(playerTeamId, playerForm); toast.success("تم إضافة اللاعب"); }
       setShowPlayerModal(false); load();
-    } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
+    } catch (err: any) { toast.error(err.response?.data?.message || "فشل"); }
   };
 
   const handleDeletePlayer = async (teamId: string, playerId: string) => {
-    if (!confirm("Delete player?")) return;
-    try { await teamApi.deletePlayer(teamId, playerId); toast.success("Deleted"); load(); }
-    catch { toast.error("Failed"); }
+    if (!confirm("حذف اللاعب؟")) return;
+    try { await teamApi.deletePlayer(teamId, playerId); toast.success("تم الحذف"); load(); }
+    catch { toast.error("فشل"); }
   };
 
   const filtered = teams.filter((t: any) => t.name?.toLowerCase().includes(search.toLowerCase()));
@@ -71,13 +71,13 @@ export default function TeamsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold text-white">Teams</h1><p className="text-sm text-gray-400">{teams.length} teams</p></div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"><Plus className="h-4 w-4" /> Create Team</button>
+        <div><h1 className="text-2xl font-bold text-white">الفرق</h1><p className="text-sm text-gray-400">{teams.length} فريق</p></div>
+        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"><Plus className="h-4 w-4" /> إنشاء فريق</button>
       </div>
 
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-900 px-3 py-2">
         <Search className="h-4 w-4 text-gray-500" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search teams..." className="flex-1 bg-transparent text-sm text-white outline-none placeholder-gray-500" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث عن الفرق..." className="flex-1 bg-transparent text-sm text-white outline-none placeholder-gray-500" />
       </div>
 
       <div className="space-y-2">
@@ -93,7 +93,7 @@ export default function TeamsPage() {
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => setExpandedTeam(expandedTeam === t.id ? null : t.id)} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800">
-                  <Users className="h-3.5 w-3.5" /> {t.players?.length || 0} players
+                  <Users className="h-3.5 w-3.5" /> {t.players?.length || 0} لاعب
                   {expandedTeam === t.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                 </button>
                 <button onClick={() => openEdit(t)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white"><Pencil className="h-4 w-4" /></button>
@@ -103,8 +103,8 @@ export default function TeamsPage() {
             {expandedTeam === t.id && (
               <div className="border-t border-gray-800 px-4 py-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-medium text-gray-400 uppercase">Players</p>
-                  <button onClick={() => openAddPlayer(t.id)} className="flex items-center gap-1 rounded-lg bg-blue-600/10 px-3 py-1.5 text-xs text-blue-400 hover:bg-blue-600/20"><Plus className="h-3 w-3" /> Add</button>
+                  <p className="text-xs font-medium text-gray-400 uppercase">اللاعبون</p>
+                  <button onClick={() => openAddPlayer(t.id)} className="flex items-center gap-1 rounded-lg bg-blue-600/10 px-3 py-1.5 text-xs text-blue-400 hover:bg-blue-600/20"><Plus className="h-3 w-3" /> إضافة</button>
                 </div>
                 <div className="space-y-1">
                   {(t.players || []).map((p: any) => (
@@ -120,30 +120,30 @@ export default function TeamsPage() {
                       </div>
                     </div>
                   ))}
-                  {(!t.players || t.players.length === 0) && <p className="py-4 text-center text-sm text-gray-500">No players</p>}
+                  {(!t.players || t.players.length === 0) && <p className="py-4 text-center text-sm text-gray-500">لا يوجد لاعبون</p>}
                 </div>
               </div>
             )}
           </div>
         ))}
-        {filtered.length === 0 && <p className="p-8 text-center text-gray-500">No teams found</p>}
+        {filtered.length === 0 && <p className="p-8 text-center text-gray-500">لا توجد فرق</p>}
       </div>
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 p-6">
-            <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editing ? "Edit Team" : "Create Team"}</h2><button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
+            <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editing ? "تعديل الفريق" : "إنشاء فريق"}</h2><button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
-              {[["name","Team Name"],["shortName","Short Name"],["logoUrl","Logo URL"],["primaryColor","Primary Color"],["country","Country"],["city","City"],["stadium","Stadium"],["coach","Coach"],["founded","Founded"]].map(([key, label]) => (
+              {[["name","اسم الفريق"],["shortName","الاسم المختصر"],["logoUrl","رابط الشعار"],["primaryColor","اللون الرئيسي"],["country","الدولة"],["city","المدينة"],["stadium","الملعب"],["coach","المدرب"],["founded","تأسس"]].map(([key, label]) => (
                 <div key={key}><label className="mb-1 block text-xs text-gray-400">{label}</label><input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
               ))}
-              <div><label className="mb-1 block text-xs text-gray-400">Category</label>
+              <div><label className="mb-1 block text-xs text-gray-400">الفئة</label>
                 <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
                   {["FOOTBALL","FUTSAL","VOLLEYBALL","BASKETBALL","HANDBALL","TENNIS"].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             </div>
-            <div className="mt-5 flex gap-3"><button onClick={() => setShowModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">Cancel</button><button onClick={handleSave} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">Save</button></div>
+            <div className="mt-5 flex gap-3"><button onClick={() => setShowModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">إلغاء</button><button onClick={handleSave} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">حفظ</button></div>
           </div>
         </div>
       )}
@@ -151,20 +151,20 @@ export default function TeamsPage() {
       {showPlayerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-xl border border-gray-800 bg-gray-900 p-6">
-            <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editingPlayer ? "Edit Player" : "Add Player"}</h2><button onClick={() => setShowPlayerModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
+            <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editingPlayer ? "تعديل اللاعب" : "إضافة لاعب"}</h2><button onClick={() => setShowPlayerModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
-              <div><label className="mb-1 block text-xs text-gray-400">Name</label><input value={playerForm.name} onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+              <div><label className="mb-1 block text-xs text-gray-400">الاسم</label><input value={playerForm.name} onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="mb-1 block text-xs text-gray-400">Number</label><input type="number" value={playerForm.shirtNumber} onChange={(e) => setPlayerForm({ ...playerForm, shirtNumber: Number(e.target.value) })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
-                <div><label className="mb-1 block text-xs text-gray-400">Position</label>
+                <div><label className="mb-1 block text-xs text-gray-400">الرقم</label><input type="number" value={playerForm.shirtNumber} onChange={(e) => setPlayerForm({ ...playerForm, shirtNumber: Number(e.target.value) })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+                <div><label className="mb-1 block text-xs text-gray-400">المركز</label>
                   <select value={playerForm.position} onChange={(e) => setPlayerForm({ ...playerForm, position: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
                     {["Goalkeeper","Defender","Midfielder","Forward"].map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
               </div>
-              <div><label className="mb-1 block text-xs text-gray-400">Nationality</label><input value={playerForm.nationality} onChange={(e) => setPlayerForm({ ...playerForm, nationality: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+              <div><label className="mb-1 block text-xs text-gray-400">الجنسية</label><input value={playerForm.nationality} onChange={(e) => setPlayerForm({ ...playerForm, nationality: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
             </div>
-            <div className="mt-5 flex gap-3"><button onClick={() => setShowPlayerModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">Cancel</button><button onClick={handleSavePlayer} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">Save</button></div>
+            <div className="mt-5 flex gap-3"><button onClick={() => setShowPlayerModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">إلغاء</button><button onClick={handleSavePlayer} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">حفظ</button></div>
           </div>
         </div>
       )}

@@ -22,15 +22,15 @@ export default function LoginPage() {
       const res = await authApi.login(email, password);
       const { user, token } = res.data.data;
       if (user.role !== "admin") {
-        toast.error("Access denied. Admin only.");
+        toast.error("غير مسموح. المدراء فقط.");
         setLoading(false);
         return;
       }
       login(user, token);
-      toast.success("Welcome back!");
+      toast.success("مرحباً بعودتك!");
       router.push("/");
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Login failed");
+      toast.error(err.response?.data?.message || "فشل تسجيل الدخول");
     } finally {
       setLoading(false);
     }
@@ -43,13 +43,13 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white">
             AS
           </div>
-          <h1 className="text-2xl font-bold text-white">AppSport Admin</h1>
-          <p className="mt-1 text-sm text-gray-400">Sign in to your admin account</p>
+          <h1 className="text-2xl font-bold text-white">لوحة تحكم AppSport</h1>
+          <p className="mt-1 text-sm text-gray-400">سجّل دخولك إلى حساب الإدارة</p>
         </div>
 
         <form onSubmit={handleSubmit} className="rounded-xl border border-gray-800 bg-gray-900 p-6 space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-300">Email</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-300">البريد الإلكتروني</label>
             <input
               type="email"
               value={email}
@@ -61,7 +61,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-300">Password</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-300">كلمة المرور</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -74,7 +74,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -91,7 +91,7 @@ export default function LoginPage() {
             ) : (
               <LogIn className="h-4 w-4" />
             )}
-            Sign In
+            تسجيل الدخول
           </button>
         </form>
       </div>

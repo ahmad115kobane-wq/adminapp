@@ -59,7 +59,7 @@ export default function DashboardPage() {
       setStats(statsRes.data.data);
       setOrderCounts(ordersRes.data.data);
     } catch (err) {
-      toast.error("Failed to load dashboard data");
+      toast.error("فشل تحميل بيانات اللوحة");
     } finally {
       setLoading(false);
     }
@@ -76,30 +76,30 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-400">Overview of your application</p>
+        <h1 className="text-2xl font-bold text-white">الرئيسية</h1>
+        <p className="mt-1 text-sm text-gray-400">نظرة عامة على التطبيق</p>
       </div>
 
       <div className="mb-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">App Statistics</h2>
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">إحصائيات التطبيق</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <StatCard label="Users" value={stats?.totalUsers || 0} icon={Users} color="bg-blue-600" />
-          <StatCard label="Operators" value={stats?.totalOperators || 0} icon={UserCog} color="bg-purple-600" />
-          <StatCard label="Matches" value={stats?.totalMatches || 0} icon={Swords} color="bg-green-600" />
-          <StatCard label="Live Now" value={stats?.liveMatches || 0} icon={Radio} color="bg-red-600" />
-          <StatCard label="Teams" value={stats?.totalTeams || 0} icon={Shield} color="bg-orange-600" />
-          <StatCard label="Players" value={stats?.totalPlayers || 0} icon={UserCheck} color="bg-cyan-600" />
+          <StatCard label="المستخدمون" value={stats?.totalUsers || 0} icon={Users} color="bg-blue-600" />
+          <StatCard label="المشغلون" value={stats?.totalOperators || 0} icon={UserCog} color="bg-purple-600" />
+          <StatCard label="المباريات" value={stats?.totalMatches || 0} icon={Swords} color="bg-green-600" />
+          <StatCard label="مباشر الآن" value={stats?.liveMatches || 0} icon={Radio} color="bg-red-600" />
+          <StatCard label="الفرق" value={stats?.totalTeams || 0} icon={Shield} color="bg-orange-600" />
+          <StatCard label="اللاعبون" value={stats?.totalPlayers || 0} icon={UserCheck} color="bg-cyan-600" />
         </div>
       </div>
 
       <div>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Orders</h2>
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">الطلبات</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCard label="Total Orders" value={orderCounts?.total || 0} icon={ShoppingBag} color="bg-blue-600" />
-          <StatCard label="Pending" value={orderCounts?.pending || 0} icon={ClipboardList} color="bg-yellow-600" />
-          <StatCard label="Approved" value={orderCounts?.approved || 0} icon={TrendingUp} color="bg-green-600" />
-          <StatCard label="Rejected" value={orderCounts?.rejected || 0} icon={Package} color="bg-red-600" />
-          <StatCard label="Delivered" value={orderCounts?.delivered || 0} icon={Package} color="bg-emerald-600" />
+          <StatCard label="إجمالي الطلبات" value={orderCounts?.total || 0} icon={ShoppingBag} color="bg-blue-600" />
+          <StatCard label="قيد الانتظار" value={orderCounts?.pending || 0} icon={ClipboardList} color="bg-yellow-600" />
+          <StatCard label="موافق عليها" value={orderCounts?.approved || 0} icon={TrendingUp} color="bg-green-600" />
+          <StatCard label="مرفوضة" value={orderCounts?.rejected || 0} icon={Package} color="bg-red-600" />
+          <StatCard label="تم التوصيل" value={orderCounts?.delivered || 0} icon={Package} color="bg-emerald-600" />
         </div>
       </div>
     </div>

@@ -21,7 +21,7 @@ export default function SlidersPage() {
 
   const load = useCallback(async () => {
     try { const res = await sliderApi.getAll(); setSliders(res.data.data || []); }
-    catch { toast.error("Failed to load"); }
+    catch { toast.error("فشل التحميل"); }
     finally { setLoading(false); }
   }, []);
 
@@ -38,19 +38,19 @@ export default function SlidersPage() {
     fd.append("sortOrder", String(sortOrder));
     if (imageFile) fd.append("image", imageFile);
     try {
-      if (editing) { await sliderApi.update(editing.id, fd); toast.success("Slider updated"); }
+      if (editing) { await sliderApi.update(editing.id, fd); toast.success("تم تحديث السلايدر"); }
       else {
-        if (!imageFile) { toast.error("Image is required"); return; }
-        await sliderApi.create(fd); toast.success("Slider created");
+        if (!imageFile) { toast.error("الصورة مطلوبة"); return; }
+        await sliderApi.create(fd); toast.success("تم إنشاء السلايدر");
       }
       setShowModal(false); load();
-    } catch (err: any) { toast.error(err.response?.data?.message || "Failed"); }
+    } catch (err: any) { toast.error(err.response?.data?.message || "فشل"); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this slider?")) return;
-    try { await sliderApi.delete(id); toast.success("Deleted"); load(); }
-    catch { toast.error("Failed"); }
+    if (!confirm("حذف هذا السلايدر؟")) return;
+    try { await sliderApi.delete(id); toast.success("تم الحذف"); load(); }
+    catch { toast.error("فشل"); }
   };
 
   if (loading) return <div className="flex h-[60vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" /></div>;
@@ -58,8 +58,8 @@ export default function SlidersPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold text-white">Home Sliders</h1><p className="text-sm text-gray-400">{sliders.length} sliders</p></div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"><Plus className="h-4 w-4" /> Add Slider</button>
+        <div><h1 className="text-2xl font-bold text-white">سلايدر الرئيسية</h1><p className="text-sm text-gray-400">{sliders.length} سلايدر</p></div>
+        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"><Plus className="h-4 w-4" /> إضافة سلايدر</button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -74,8 +74,8 @@ export default function SlidersPage() {
               <div>
                 <p className="text-sm font-medium text-white">{s.title || "Untitled"}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  {s.isActive ? <span className="rounded-full bg-green-600/20 px-2 py-0.5 text-xs text-green-400">Active</span> : <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-400">Inactive</span>}
-                  <span className="text-xs text-gray-500">Order: {s.sortOrder}</span>
+                  {s.isActive ? <span className="rounded-full bg-green-600/20 px-2 py-0.5 text-xs text-green-400">نشط</span> : <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-400">غير نشط</span>}
+                  <span className="text-xs text-gray-500">الترتيب: {s.sortOrder}</span>
                 </div>
               </div>
               <div className="flex gap-1">
@@ -86,25 +86,25 @@ export default function SlidersPage() {
           </div>
         ))}
       </div>
-      {sliders.length === 0 && <p className="p-8 text-center text-gray-500">No sliders</p>}
+      {sliders.length === 0 && <p className="p-8 text-center text-gray-500">لا توجد سلايدرات</p>}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-xl border border-gray-800 bg-gray-900 p-6">
-            <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editing ? "Edit Slider" : "Add Slider"}</h2><button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
+            <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editing ? "تعديل السلايدر" : "إضافة سلايدر"}</h2><button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
-              <div><label className="mb-1 block text-xs text-gray-400">Title</label><input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
-              <div><label className="mb-1 block text-xs text-gray-400">Link URL</label><input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+              <div><label className="mb-1 block text-xs text-gray-400">العنوان</label><input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+              <div><label className="mb-1 block text-xs text-gray-400">رابط الموقع</label><input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
               <div>
-                <label className="mb-1 block text-xs text-gray-400">Image {!editing && "(required)"}</label>
+                <label className="mb-1 block text-xs text-gray-400">الصورة {!editing && "(مطلوبة)"}</label>
                 <input ref={fileRef} type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-400 file:mr-3 file:rounded file:border-0 file:bg-blue-600 file:px-3 file:py-1 file:text-sm file:text-white" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="mb-1 block text-xs text-gray-400">Sort Order</label><input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
-                <div className="flex items-end pb-1"><label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Active</label></div>
+                <div><label className="mb-1 block text-xs text-gray-400">الترتيب</label><input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+                <div className="flex items-end pb-1"><label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> نشط</label></div>
               </div>
             </div>
-            <div className="mt-5 flex gap-3"><button onClick={() => setShowModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">Cancel</button><button onClick={handleSave} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">Save</button></div>
+            <div className="mt-5 flex gap-3"><button onClick={() => setShowModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">إلغاء</button><button onClick={handleSave} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">حفظ</button></div>
           </div>
         </div>
       )}

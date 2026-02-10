@@ -12,22 +12,22 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Matches", href: "/matches", icon: Swords },
-  { label: "Teams", href: "/teams", icon: Shield },
-  { label: "Competitions", href: "/competitions", icon: Trophy },
-  { label: "Users", href: "/users", icon: Users },
-  { label: "Operators", href: "/operators", icon: UserCog },
+  { label: "الرئيسية", href: "/", icon: LayoutDashboard },
+  { label: "المباريات", href: "/matches", icon: Swords },
+  { label: "الفرق", href: "/teams", icon: Shield },
+  { label: "المسابقات", href: "/competitions", icon: Trophy },
+  { label: "المستخدمون", href: "/users", icon: Users },
+  { label: "المشغلون", href: "/operators", icon: UserCog },
   { label: "divider", href: "", icon: Store },
-  { label: "Products", href: "/store/products", icon: Package },
-  { label: "Categories", href: "/store/categories", icon: Tags },
-  { label: "Banners", href: "/store/banners", icon: Image },
-  { label: "Orders", href: "/orders", icon: ClipboardList },
+  { label: "المنتجات", href: "/store/products", icon: Package },
+  { label: "الأقسام", href: "/store/categories", icon: Tags },
+  { label: "البانرات", href: "/store/banners", icon: Image },
+  { label: "الطلبات", href: "/orders", icon: ClipboardList },
   { label: "divider2", href: "", icon: Store },
-  { label: "News", href: "/news", icon: Newspaper },
-  { label: "Sliders", href: "/sliders", icon: SlidersHorizontal },
-  { label: "Legal Pages", href: "/legal", icon: FileText },
-  { label: "Event Logs", href: "/events", icon: Activity },
+  { label: "الأخبار", href: "/news", icon: Newspaper },
+  { label: "السلايدر", href: "/sliders", icon: SlidersHorizontal },
+  { label: "الصفحات القانونية", href: "/legal", icon: FileText },
+  { label: "سجل الأحداث", href: "/events", icon: Activity },
 ];
 
 export default function Sidebar() {
@@ -35,14 +35,14 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-gray-800 bg-gray-950">
+    <aside className="fixed right-0 top-0 z-40 flex h-screen w-64 flex-col border-l border-gray-800 bg-gray-950">
       <div className="flex h-16 items-center gap-3 border-b border-gray-800 px-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white text-sm">
           AS
         </div>
         <div>
           <p className="text-sm font-semibold text-white">AppSport</p>
-          <p className="text-xs text-gray-400">Admin Panel</p>
+          <p className="text-xs text-gray-400">لوحة الإدارة</p>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export default function Sidebar() {
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10"
         >
           <LogOut className="h-4 w-4" />
-          Sign Out
+          تسجيل الخروج
         </button>
       </div>
     </aside>

@@ -49,6 +49,8 @@ export const adminApi = {
     api.delete(`/admin/matches/${matchId}/operators/${operatorId}`),
   getCompetitions: () => api.get("/admin/competitions"),
   createCompetition: (data: any) => api.post("/admin/competitions", data),
+  updateCompetition: (id: string, data: any) => api.put(`/admin/competitions/${id}`, data),
+  deleteCompetition: (id: string) => api.delete(`/admin/competitions/${id}`),
   getEventLogs: (params?: { matchId?: string; limit?: number }) =>
     api.get("/admin/events/logs", { params }),
   getUsers: (params?: { search?: string; role?: string; page?: number; limit?: number }) =>

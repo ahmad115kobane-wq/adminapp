@@ -21,7 +21,7 @@ export default function EventLogsPage() {
 
   const load = useCallback(async () => {
     try { const res = await adminApi.getEventLogs({ limit: 100 }); setEvents(res.data.data || []); }
-    catch { toast.error("Failed to load event logs"); }
+    catch { toast.error("فشل تحميل سجل الأحداث"); }
     finally { setLoading(false); }
   }, []);
 
@@ -32,20 +32,20 @@ export default function EventLogsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Event Logs</h1>
-        <p className="text-sm text-gray-400">{events.length} recent events</p>
+        <h1 className="text-2xl font-bold text-white">سجل الأحداث</h1>
+        <p className="text-sm text-gray-400">{events.length} حدث</p>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-800">
         <table className="w-full text-sm">
           <thead className="bg-gray-900 text-gray-400">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Type</th>
-              <th className="px-4 py-3 text-left font-medium">Match</th>
-              <th className="px-4 py-3 text-left font-medium">Player</th>
-              <th className="px-4 py-3 text-left font-medium">Minute</th>
-              <th className="px-4 py-3 text-left font-medium">Created By</th>
-              <th className="px-4 py-3 text-left font-medium">Time</th>
+              <th className="px-4 py-3 text-right font-medium">النوع</th>
+              <th className="px-4 py-3 text-right font-medium">المباراة</th>
+              <th className="px-4 py-3 text-right font-medium">اللاعب</th>
+              <th className="px-4 py-3 text-right font-medium">الدقيقة</th>
+              <th className="px-4 py-3 text-right font-medium">بواسطة</th>
+              <th className="px-4 py-3 text-right font-medium">الوقت</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
@@ -70,7 +70,7 @@ export default function EventLogsPage() {
         {events.length === 0 && (
           <div className="flex flex-col items-center py-12">
             <Activity className="mb-3 h-8 w-8 text-gray-600" />
-            <p className="text-gray-500">No event logs found</p>
+            <p className="text-gray-500">لا توجد أحداث</p>
           </div>
         )}
       </div>

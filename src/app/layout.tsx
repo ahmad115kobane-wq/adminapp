@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Cairo } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-const inter = Inter({ subsets: ["latin"] });
+const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
 export const metadata: Metadata = {
-  title: "AppSport Admin",
-  description: "Admin Dashboard for AppSport",
+  title: "لوحة تحكم AppSport",
+  description: "لوحة إدارة تطبيق AppSport",
 };
 
 export default function RootLayout({
@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} antialiased bg-gray-950 text-white`}>
+    <html lang="ar" dir="rtl" className="dark">
+      <body className={`${cairo.className} antialiased bg-gray-950 text-white`}>
         <Providers>
           <DashboardLayout>{children}</DashboardLayout>
         </Providers>
