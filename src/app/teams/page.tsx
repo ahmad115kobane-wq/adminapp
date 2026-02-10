@@ -25,10 +25,9 @@ const TEAM_COLORS = [
 const CATEGORIES: Record<string, string> = {
   FOOTBALL: "كرة قدم",
   FUTSAL: "صالات",
-  VOLLEYBALL: "كرة طائرة",
-  BASKETBALL: "كرة سلة",
   HANDBALL: "كرة يد",
-  TENNIS: "تنس",
+  BASKETBALL: "كرة سلة",
+  NATIONAL: "منتخبات",
 };
 
 export default function TeamsPage() {

@@ -15,7 +15,7 @@ const navItems = [
   { label: "الرئيسية", href: "/", icon: LayoutDashboard },
   { label: "المباريات", href: "/matches", icon: Swords },
   { label: "الفرق", href: "/teams", icon: Shield },
-  { label: "المسابقات", href: "/competitions", icon: Trophy },
+  { label: "البطولات", href: "/competitions", icon: Trophy },
   { label: "المستخدمون", href: "/users", icon: Users },
   { label: "المشغلون", href: "/operators", icon: UserCog },
   { label: "divider", href: "", icon: Store },
