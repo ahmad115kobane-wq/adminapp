@@ -16,7 +16,9 @@ export default function MatchesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({
-    competitionId: "", homeTeamId: "", awayTeamId: "", startTime: "", venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "",
+    competitionId: "", homeTeamId: "", awayTeamId: "",
+    date: "", hour: "06", minute: "00", ampm: "م",
+    venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "",
   });
 
   const load = useCallback(async () => {
@@ -34,29 +36,66 @@ export default function MatchesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const buildISO = () => {
+    if (!form.date) return "";
+    let h = parseInt(form.hour);
+    if (form.ampm === "م" && h < 12) h += 12;
+    if (form.ampm === "ص" && h === 12) h = 0;
+    return `${form.date}T${String(h).padStart(2, "0")}:${form.minute}:00`;
+  };
+
   const openCreate = () => {
     setEditing(null);
-    setForm({ competitionId: "", homeTeamId: "", awayTeamId: "", startTime: "", venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "" });
+    setForm({ competitionId: "", homeTeamId: "", awayTeamId: "", date: "", hour: "06", minute: "00", ampm: "م", venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "" });
     setShowModal(true);
   };
 
   const openEdit = (m: any) => {
     setEditing(m);
+    let date = "", hour = "06", minute = "00", ampm = "م";
+    if (m.startTime) {
+      const d = new Date(m.startTime);
+      date = d.toISOString().slice(0, 10);
+      let h = d.getHours();
+      ampm = h >= 12 ? "م" : "ص";
+      h = h % 12 || 12;
+      hour = String(h).padStart(2, "0");
+      minute = String(d.getMinutes()).padStart(2, "0");
+    }
     setForm({
       competitionId: m.competitionId || "", homeTeamId: m.homeTeamId || "", awayTeamId: m.awayTeamId || "",
-      startTime: m.startTime ? new Date(m.startTime).toISOString().slice(0, 16) : "",
+      date, hour, minute, ampm,
       venue: m.venue || "", isFeatured: m.isFeatured || false, referee: m.referee || "", matchday: m.matchday || "", season: m.season || "", operatorId: "",
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    if (!form.competitionId || !form.homeTeamId || !form.awayTeamId || !form.date) {
+      toast.error("يرجى ملء الحقول المطلوبة (المسابقة، الفريقين، التاريخ)");
+      return;
+    }
+    const iso = buildISO();
+    if (!iso) { toast.error("يرجى تحديد التاريخ"); return; }
     try {
+      const payload: any = {
+        competitionId: form.competitionId,
+        homeTeamId: form.homeTeamId,
+        awayTeamId: form.awayTeamId,
+        startTime: new Date(iso).toISOString(),
+        venue: form.venue || undefined,
+        isFeatured: form.isFeatured,
+        referee: form.referee || undefined,
+        matchday: form.matchday || undefined,
+        season: form.season || undefined,
+      };
+      if (!editing && form.operatorId) payload.operatorId = form.operatorId;
+
       if (editing) {
-        await matchApi.update(editing.id, { ...form, startTime: new Date(form.startTime).toISOString() });
+        await matchApi.update(editing.id, payload);
         toast.success("تم تحديث المباراة");
       } else {
-        await matchApi.create({ ...form, startTime: new Date(form.startTime).toISOString() });
+        await matchApi.create(payload);
         toast.success("تم إنشاء المباراة");
       }
       setShowModal(false);
@@ -86,6 +125,9 @@ export default function MatchesPage() {
     halftime: "bg-yellow-600/20 text-yellow-400",
     finished: "bg-green-600/20 text-green-400",
   };
+
+  const hours = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
+  const minutes = ["00", "15", "30", "45"];
 
   if (loading) return <div className="flex h-[60vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" /></div>;
 
@@ -152,43 +194,69 @@ export default function MatchesPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-lg rounded-xl border border-gray-800 bg-gray-900 p-6">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">{editing ? "تعديل المباراة" : "إنشاء مباراة"}</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs text-gray-400">المسابقة</label>
+                <label className="mb-1 block text-xs text-gray-400">المسابقة *</label>
                 <select value={form.competitionId} onChange={(e) => setForm({ ...form, competitionId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
-                  <option value="">اختر...</option>
+                  <option value="">اختر المسابقة...</option>
                   {competitions.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">فريق المضيف</label>
+                  <label className="mb-1 block text-xs text-gray-400">فريق المضيف *</label>
                   <select value={form.homeTeamId} onChange={(e) => setForm({ ...form, homeTeamId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
                     <option value="">اختر...</option>
                     {teams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">فريق الضيف</label>
+                  <label className="mb-1 block text-xs text-gray-400">فريق الضيف *</label>
                   <select value={form.awayTeamId} onChange={(e) => setForm({ ...form, awayTeamId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
                     <option value="">اختر...</option>
                     {teams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
               </div>
+              {/* Date & Time with AM/PM */}
               <div>
-                <label className="mb-1 block text-xs text-gray-400">وقت البداية</label>
-                <input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" />
+                <label className="mb-1 block text-xs text-gray-400">التاريخ والوقت *</label>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="col-span-2">
+                    <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" />
+                  </div>
+                  <div className="flex gap-1">
+                    <select value={form.hour} onChange={(e) => setForm({ ...form, hour: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-1 py-2 text-sm text-white outline-none text-center">
+                      {hours.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="flex items-center text-gray-500">:</span>
+                    <select value={form.minute} onChange={(e) => setForm({ ...form, minute: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-1 py-2 text-sm text-white outline-none text-center">
+                      {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="flex h-full rounded-lg border border-gray-700 overflow-hidden">
+                      <button type="button" onClick={() => setForm({ ...form, ampm: "ص" })}
+                        className={`flex-1 py-2 text-xs font-medium transition-colors ${form.ampm === "ص" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`}>
+                        ص
+                      </button>
+                      <button type="button" onClick={() => setForm({ ...form, ampm: "م" })}
+                        className={`flex-1 py-2 text-xs font-medium transition-colors ${form.ampm === "م" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"}`}>
+                        م
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs text-gray-400">الملعب</label>
-                  <input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" />
+                  <input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} placeholder="اسم الملعب" className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-gray-400">الحكم</label>

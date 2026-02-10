@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { storeApi } from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "https://sports-live.up.railway.app";
 
 export default function BannersPage() {
   const [banners, setBanners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: "", titleAr: "", titleKu: "", subtitle: "", subtitleAr: "", subtitleKu: "",
-    gradientStart: "#3b82f6", gradientEnd: "#8b5cf6", discount: "",
+    imageUrl: "", gradientStart: "#3b82f6", gradientEnd: "#8b5cf6", discount: "",
     isActive: true, sortOrder: 0,
   });
 
@@ -26,27 +32,48 @@ export default function BannersPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ title: "", titleAr: "", titleKu: "", subtitle: "", subtitleAr: "", subtitleKu: "", gradientStart: "#3b82f6", gradientEnd: "#8b5cf6", discount: "", isActive: true, sortOrder: 0 });
+    setImageFile(null);
+    setImagePreview("");
+    setForm({ title: "", titleAr: "", titleKu: "", subtitle: "", subtitleAr: "", subtitleKu: "", imageUrl: "", gradientStart: "#3b82f6", gradientEnd: "#8b5cf6", discount: "", isActive: true, sortOrder: 0 });
     setShowModal(true);
   };
 
   const openEdit = (b: any) => {
     setEditing(b);
+    setImageFile(null);
+    setImagePreview(b.imageUrl ? `${API_BASE}${b.imageUrl}` : "");
     setForm({
       title: b.title || "", titleAr: b.titleAr || "", titleKu: b.titleKu || "",
       subtitle: b.subtitle || "", subtitleAr: b.subtitleAr || "", subtitleKu: b.subtitleKu || "",
-      gradientStart: b.gradientStart || "#3b82f6", gradientEnd: b.gradientEnd || "#8b5cf6",
+      imageUrl: b.imageUrl || "", gradientStart: b.gradientStart || "#3b82f6", gradientEnd: b.gradientEnd || "#8b5cf6",
       discount: b.discount || "", isActive: b.isActive !== false, sortOrder: b.sortOrder || 0,
     });
     setShowModal(true);
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const handleSave = async () => {
     try {
-      if (editing) { await storeApi.updateBanner(editing.id, form); toast.success("تم التحديث"); }
-      else { await storeApi.createBanner(form); toast.success("تم الإنشاء"); }
+      let imageUrl = form.imageUrl;
+      if (imageFile) {
+        setUploading(true);
+        const fd = new FormData();
+        fd.append("image", imageFile);
+        const uploadRes = await storeApi.uploadImage(fd);
+        imageUrl = uploadRes.data.data.imageUrl;
+        setUploading(false);
+      }
+      const payload = { ...form, imageUrl };
+      if (editing) { await storeApi.updateBanner(editing.id, payload); toast.success("تم التحديث"); }
+      else { await storeApi.createBanner(payload); toast.success("تم الإنشاء"); }
       setShowModal(false); load();
-    } catch (err: any) { toast.error(err.response?.data?.message || "فشل"); }
+    } catch (err: any) { setUploading(false); toast.error(err.response?.data?.message || "فشل"); }
   };
 
   const handleDelete = async (id: string) => {
@@ -67,11 +94,21 @@ export default function BannersPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {banners.map((b: any) => (
           <div key={b.id} className="overflow-hidden rounded-xl border border-gray-800">
-            <div className="h-24 p-4" style={{ background: `linear-gradient(135deg, ${b.gradientStart || "#3b82f6"}, ${b.gradientEnd || "#8b5cf6"})` }}>
-              <p className="text-lg font-bold text-white">{b.title}</p>
-              {b.subtitle && <p className="text-sm text-white/80">{b.subtitle}</p>}
-              {b.discount && <span className="mt-1 inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs text-white">{b.discount}</span>}
-            </div>
+            {b.imageUrl ? (
+              <div className="relative h-32">
+                <img src={`${API_BASE}${b.imageUrl}`} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-4 flex flex-col justify-end">
+                  <p className="text-lg font-bold text-white">{b.title}</p>
+                  {b.subtitle && <p className="text-sm text-white/80">{b.subtitle}</p>}
+                </div>
+              </div>
+            ) : (
+              <div className="h-28 p-4" style={{ background: `linear-gradient(135deg, ${b.gradientStart || "#3b82f6"}, ${b.gradientEnd || "#8b5cf6"})` }}>
+                <p className="text-lg font-bold text-white">{b.title}</p>
+                {b.subtitle && <p className="text-sm text-white/80">{b.subtitle}</p>}
+                {b.discount && <span className="mt-1 inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs text-white">{b.discount}</span>}
+              </div>
+            )}
             <div className="flex items-center justify-between bg-gray-900 px-4 py-2">
               <div className="flex items-center gap-2">
                 {b.isActive ? <span className="rounded-full bg-green-600/20 px-2 py-0.5 text-xs text-green-400">نشط</span> : <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-400">غير نشط</span>}
@@ -92,6 +129,28 @@ export default function BannersPage() {
           <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 p-6">
             <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editing ? "تعديل البانر" : "إضافة بانر"}</h2><button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
+              {/* Image Upload */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">صورة البانر</label>
+                <div className="flex items-center gap-4">
+                  <div onClick={() => fileRef.current?.click()} className="flex h-20 w-32 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-700 bg-gray-800 hover:border-blue-500 transition-colors overflow-hidden">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <Upload className="h-5 w-5 text-gray-500" />
+                        <span className="text-[10px] text-gray-500">رفع صورة</span>
+                      </div>
+                    )}
+                  </div>
+                  <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                  <div className="flex-1 text-xs text-gray-500">
+                    <p>اضغط لرفع صورة للبانر</p>
+                    <p>PNG, JPG حتى 5MB</p>
+                    {imageFile && <p className="mt-1 text-blue-400">{imageFile.name}</p>}
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div><label className="mb-1 block text-xs text-gray-400">العنوان (EN)</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
                 <div><label className="mb-1 block text-xs text-gray-400">العنوان (AR)</label><input value={form.titleAr} onChange={(e) => setForm({ ...form, titleAr: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" dir="rtl" /></div>
@@ -112,7 +171,12 @@ export default function BannersPage() {
                 <div><label className="mb-1 block text-xs text-gray-400">الترتيب</label><input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} className="w-20 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
               </div>
             </div>
-            <div className="mt-5 flex gap-3"><button onClick={() => setShowModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">إلغاء</button><button onClick={handleSave} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">حفظ</button></div>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setShowModal(false)} className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800">إلغاء</button>
+              <button onClick={handleSave} disabled={uploading} className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploading ? "جاري الرفع..." : "حفظ"}
+              </button>
+            </div>
           </div>
         </div>
       )}

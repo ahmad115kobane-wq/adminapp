@@ -4,9 +4,37 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { storeApi } from "@/lib/api";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/utils";
-import { Plus, Pencil, Trash2, Search, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Upload, Check } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "https://sports-live.up.railway.app";
+
+const AVAILABLE_COLORS = [
+  { value: "#000000", label: "أسود" },
+  { value: "#FFFFFF", label: "أبيض" },
+  { value: "#1E3A8A", label: "أزرق داكن" },
+  { value: "#DC2626", label: "أحمر" },
+  { value: "#16A34A", label: "أخضر" },
+  { value: "#CA8A04", label: "ذهبي" },
+  { value: "#7C3AED", label: "بنفسجي" },
+  { value: "#EA580C", label: "برتقالي" },
+  { value: "#EC4899", label: "وردي" },
+  { value: "#6B7280", label: "رمادي" },
+  { value: "#92400E", label: "بني" },
+  { value: "#0891B2", label: "سماوي" },
+];
+
+const AVAILABLE_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
+
+const AVAILABLE_EMOJIS = ["📦", "👕", "👟", "🩳", "⚽", "🧢", "🎽", "🧣", "🎒", "🏆", "⭐", "🔥"];
+
+const AVAILABLE_BADGES = [
+  { value: "", label: "بدون" },
+  { value: "new", label: "جديد" },
+  { value: "sale", label: "تخفيض" },
+  { value: "hot", label: "رائج" },
+  { value: "limited", label: "محدود" },
+  { value: "bestseller", label: "الأكثر مبيعاً" },
+];
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -19,12 +47,13 @@ export default function ProductsPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [form, setForm] = useState({
     categoryId: "", name: "", nameAr: "", nameKu: "",
     description: "", descriptionAr: "", descriptionKu: "",
     price: 0, originalPrice: 0, discount: "",
     imageUrl: "", emoji: "📦", badge: "",
-    colors: "", sizes: "",
     inStock: true, isFeatured: false, isActive: true, sortOrder: 0,
   });
 
@@ -39,11 +68,16 @@ export default function ProductsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const toggleColor = (c: string) => setSelectedColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+  const toggleSize = (s: string) => setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+
   const openCreate = () => {
     setEditing(null);
     setImageFile(null);
     setImagePreview("");
-    setForm({ categoryId: "", name: "", nameAr: "", nameKu: "", description: "", descriptionAr: "", descriptionKu: "", price: 0, originalPrice: 0, discount: "", imageUrl: "", emoji: "📦", badge: "", colors: "", sizes: "", inStock: true, isFeatured: false, isActive: true, sortOrder: 0 });
+    setSelectedColors([]);
+    setSelectedSizes([]);
+    setForm({ categoryId: "", name: "", nameAr: "", nameKu: "", description: "", descriptionAr: "", descriptionKu: "", price: 0, originalPrice: 0, discount: "", imageUrl: "", emoji: "📦", badge: "", inStock: true, isFeatured: false, isActive: true, sortOrder: 0 });
     setShowModal(true);
   };
 
@@ -51,14 +85,15 @@ export default function ProductsPage() {
     setEditing(p);
     setImageFile(null);
     setImagePreview(p.imageUrl ? `${API_BASE}${p.imageUrl}` : "");
-    const colorsStr = p.colors ? (typeof p.colors === "string" ? JSON.parse(p.colors) : p.colors).join(", ") : "";
-    const sizesStr = p.sizes ? (typeof p.sizes === "string" ? JSON.parse(p.sizes) : p.sizes).join(", ") : "";
+    const pColors = p.colors ? (typeof p.colors === "string" ? JSON.parse(p.colors) : p.colors) : [];
+    const pSizes = p.sizes ? (typeof p.sizes === "string" ? JSON.parse(p.sizes) : p.sizes) : [];
+    setSelectedColors(pColors);
+    setSelectedSizes(pSizes);
     setForm({
       categoryId: p.categoryId || "", name: p.name || "", nameAr: p.nameAr || "", nameKu: p.nameKu || "",
       description: p.description || "", descriptionAr: p.descriptionAr || "", descriptionKu: p.descriptionKu || "",
       price: p.price || 0, originalPrice: p.originalPrice || 0, discount: p.discount || "",
       imageUrl: p.imageUrl || "", emoji: p.emoji || "📦", badge: p.badge || "",
-      colors: colorsStr, sizes: sizesStr,
       inStock: p.inStock !== false, isFeatured: p.isFeatured || false, isActive: p.isActive !== false, sortOrder: p.sortOrder || 0,
     });
     setShowModal(true);
@@ -84,14 +119,11 @@ export default function ProductsPage() {
         setUploading(false);
       }
 
-      const colorsArr = form.colors ? form.colors.split(",").map((c: string) => c.trim()).filter(Boolean) : [];
-      const sizesArr = form.sizes ? form.sizes.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
-
       const payload = {
         ...form,
         imageUrl,
-        colors: colorsArr.length > 0 ? colorsArr : undefined,
-        sizes: sizesArr.length > 0 ? sizesArr : undefined,
+        colors: selectedColors.length > 0 ? selectedColors : undefined,
+        sizes: selectedSizes.length > 0 ? selectedSizes : undefined,
       };
 
       if (editing) { await storeApi.updateProduct(editing.id, payload); toast.success("تم تحديث المنتج"); }
@@ -181,10 +213,10 @@ export default function ProductsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 p-6">
             <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-white">{editing ? "تعديل المنتج" : "إضافة منتج"}</h2><button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><X className="h-5 w-5" /></button></div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Image Upload */}
               <div>
-                <label className="mb-1 block text-xs text-gray-400">صورة المنتج</label>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">صورة المنتج</label>
                 <div className="flex items-center gap-4">
                   <div
                     onClick={() => fileRef.current?.click()}
@@ -209,7 +241,7 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-gray-400">القسم</label>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">القسم</label>
                 <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
                   <option value="">اختر القسم...</option>
                   {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -220,7 +252,6 @@ export default function ProductsPage() {
                 <div><label className="mb-1 block text-xs text-gray-400">الاسم (AR)</label><input value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" dir="rtl" /></div>
                 <div><label className="mb-1 block text-xs text-gray-400">الاسم (KU)</label><input value={form.nameKu} onChange={(e) => setForm({ ...form, nameKu: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" dir="rtl" /></div>
               </div>
-              {/* Descriptions */}
               <div><label className="mb-1 block text-xs text-gray-400">الوصف (EN)</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none resize-none" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="mb-1 block text-xs text-gray-400">الوصف (AR)</label><textarea value={form.descriptionAr} onChange={(e) => setForm({ ...form, descriptionAr: e.target.value })} rows={2} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none resize-none" dir="rtl" /></div>
@@ -231,19 +262,70 @@ export default function ProductsPage() {
                 <div><label className="mb-1 block text-xs text-gray-400">السعر الأصلي</label><input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: Number(e.target.value) })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
                 <div><label className="mb-1 block text-xs text-gray-400">الخصم</label><input value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} placeholder="مثلاً 20%" className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
               </div>
-              {/* Colors & Sizes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="mb-1 block text-xs text-gray-400">الألوان (مفصولة بفاصلة)</label><input value={form.colors} onChange={(e) => setForm({ ...form, colors: e.target.value })} placeholder="أحمر, أزرق, أسود" className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
-                <div><label className="mb-1 block text-xs text-gray-400">المقاسات (مفصولة بفاصلة)</label><input value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} placeholder="S, M, L, XL" className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+
+              {/* Selectable Colors */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">الألوان</label>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_COLORS.map((c) => (
+                    <button key={c.value} type="button" onClick={() => toggleColor(c.value)}
+                      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${selectedColors.includes(c.value) ? "border-blue-500 bg-blue-600/10 text-blue-400" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"}`}
+                    >
+                      <span className="h-4 w-4 rounded-full border border-gray-600" style={{ backgroundColor: c.value }} />
+                      {c.label}
+                      {selectedColors.includes(c.value) && <Check className="h-3 w-3" />}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="mb-1 block text-xs text-gray-400">الرمز</label><input value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
-                <div><label className="mb-1 block text-xs text-gray-400">الشارة</label><input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="مثلاً جديد، تخفيض" className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" /></div>
+
+              {/* Selectable Sizes */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">المقاسات</label>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_SIZES.map((s) => (
+                    <button key={s} type="button" onClick={() => toggleSize(s)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selectedSizes.includes(s) ? "border-blue-500 bg-blue-600/10 text-blue-400" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Selectable Emoji */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">الرمز</label>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_EMOJIS.map((e) => (
+                    <button key={e} type="button" onClick={() => setForm({ ...form, emoji: e })}
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors ${form.emoji === e ? "border-blue-500 bg-blue-600/10" : "border-gray-700 bg-gray-800 hover:border-gray-600"}`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selectable Badge */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-400">الشارة</label>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_BADGES.map((b) => (
+                    <button key={b.value} type="button" onClick={() => setForm({ ...form, badge: b.value })}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${form.badge === b.value ? "border-blue-500 bg-blue-600/10 text-blue-400" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"}`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Checkboxes */}
               <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.inStock} onChange={(e) => setForm({ ...form, inStock: e.target.checked })} /> متوفر</label>
-                <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} /> مميز</label>
-                <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} /> نشط</label>
+                <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.inStock} onChange={(e) => setForm({ ...form, inStock: e.target.checked })} className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-600" /> متوفر</label>
+                <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-600" /> مميز</label>
+                <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-600" /> نشط</label>
               </div>
             </div>
             <div className="mt-5 flex gap-3">
