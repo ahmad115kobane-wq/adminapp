@@ -151,6 +151,16 @@ export const sliderApi = {
   delete: (id: string) => api.delete(`/sliders/admin/${id}`),
 };
 
+// Video Ads
+export const videoAdApi = {
+  getAll: () => api.get("/video-ads/admin"),
+  create: (formData: FormData) =>
+    api.post("/video-ads/admin", formData, { headers: { "Content-Type": "multipart/form-data" } }),
+  update: (id: string, formData: FormData) =>
+    api.put(`/video-ads/admin/${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } }),
+  delete: (id: string) => api.delete(`/video-ads/admin/${id}`),
+};
+
 // Legal
 export const legalApi = {
   getAll: () => api.get("/legal/admin/all"),
