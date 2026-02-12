@@ -7,6 +7,11 @@ import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "https://sports-live.up.railway.app";
 
+const getImageUrl = (url: string) => {
+  if (!url) return "";
+  return url.startsWith("http") ? url : `${API_BASE}${url}`;
+};
+
 export default function BannersPage() {
   const [banners, setBanners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +46,7 @@ export default function BannersPage() {
   const openEdit = (b: any) => {
     setEditing(b);
     setImageFile(null);
-    setImagePreview(b.imageUrl ? `${API_BASE}${b.imageUrl}` : "");
+    setImagePreview(b.imageUrl ? getImageUrl(b.imageUrl) : "");
     setForm({
       title: b.title || "", titleAr: b.titleAr || "", titleKu: b.titleKu || "",
       subtitle: b.subtitle || "", subtitleAr: b.subtitleAr || "", subtitleKu: b.subtitleKu || "",
@@ -96,7 +101,7 @@ export default function BannersPage() {
           <div key={b.id} className="overflow-hidden rounded-xl border border-gray-800">
             {b.imageUrl ? (
               <div className="relative h-32">
-                <img src={`${API_BASE}${b.imageUrl}`} alt="" className="h-full w-full object-cover" />
+                <img src={getImageUrl(b.imageUrl)} alt="" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent p-4 flex flex-col justify-end">
                   <p className="text-lg font-bold text-white">{b.title}</p>
                   {b.subtitle && <p className="text-sm text-white/80">{b.subtitle}</p>}

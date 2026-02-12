@@ -8,6 +8,11 @@ import { Plus, Pencil, Trash2, Search, X, Upload, Check } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "https://sports-live.up.railway.app";
 
+const getImageUrl = (url: string) => {
+  if (!url) return "";
+  return url.startsWith("http") ? url : `${API_BASE}${url}`;
+};
+
 const AVAILABLE_COLORS = [
   { value: "#000000", label: "أسود" },
   { value: "#FFFFFF", label: "أبيض" },
@@ -84,7 +89,7 @@ export default function ProductsPage() {
   const openEdit = (p: any) => {
     setEditing(p);
     setImageFile(null);
-    setImagePreview(p.imageUrl ? `${API_BASE}${p.imageUrl}` : "");
+    setImagePreview(p.imageUrl ? getImageUrl(p.imageUrl) : "");
     const pColors = p.colors ? (typeof p.colors === "string" ? JSON.parse(p.colors) : p.colors) : [];
     const pSizes = p.sizes ? (typeof p.sizes === "string" ? JSON.parse(p.sizes) : p.sizes) : [];
     setSelectedColors(pColors);
@@ -174,7 +179,7 @@ export default function ProductsPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     {p.imageUrl ? (
-                      <img src={`${API_BASE}${p.imageUrl}`} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      <img src={getImageUrl(p.imageUrl)} alt="" className="h-10 w-10 rounded-lg object-cover" />
                     ) : (
                       <span className="text-xl">{p.emoji || "📦"}</span>
                     )}
