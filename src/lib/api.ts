@@ -161,6 +161,22 @@ export const videoAdApi = {
   delete: (id: string) => api.delete(`/video-ads/admin/${id}`),
 };
 
+// Supervisors
+export const supervisorApi = {
+  getAll: (params?: any) => api.get("/supervisors", { params }),
+  getById: (id: string) => api.get(`/supervisors/${id}`),
+  create: (formData: FormData) =>
+    api.post("/supervisors", formData, { headers: { "Content-Type": "multipart/form-data" } }),
+  update: (id: string, formData: FormData) =>
+    api.put(`/supervisors/${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } }),
+  delete: (id: string) => api.delete(`/supervisors/${id}`),
+};
+
+// Referees
+export const refereeApi = {
+  getAll: (params?: any) => api.get("/referees", { params }),
+};
+
 // Legal
 export const legalApi = {
   getAll: () => api.get("/legal/admin/all"),

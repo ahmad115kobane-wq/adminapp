@@ -12,7 +12,7 @@ export default function VideoAdsPage() {
   const [editing, setEditing] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [clickUrl, setClickUrl] = useState("");
-  const [mandatorySeconds, setMandatorySeconds] = useState(5);
+  const [mandatorySeconds, setMandatorySeconds] = useState("5");
   const [isActive, setIsActive] = useState(true);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -37,7 +37,7 @@ export default function VideoAdsPage() {
     setEditing(null);
     setTitle("");
     setClickUrl("");
-    setMandatorySeconds(5);
+    setMandatorySeconds("5");
     setIsActive(true);
     setVideoFile(null);
     setThumbnailFile(null);
@@ -48,7 +48,7 @@ export default function VideoAdsPage() {
     setEditing(ad);
     setTitle(ad.title || "");
     setClickUrl(ad.clickUrl || "");
-    setMandatorySeconds(ad.mandatorySeconds || 5);
+    setMandatorySeconds(String(ad.mandatorySeconds || 5));
     setIsActive(ad.isActive !== false);
     setVideoFile(null);
     setThumbnailFile(null);
@@ -63,7 +63,7 @@ export default function VideoAdsPage() {
     setSaving(true);
     const fd = new FormData();
     fd.append("title", title || "إعلان بدون عنوان");
-    fd.append("mandatorySeconds", String(mandatorySeconds));
+    fd.append("mandatorySeconds", String(Number(mandatorySeconds) || 5));
     fd.append("isActive", String(isActive));
     if (clickUrl) fd.append("clickUrl", clickUrl);
     if (videoFile) fd.append("video", videoFile);
@@ -267,7 +267,7 @@ export default function VideoAdsPage() {
                     min={1}
                     max={30}
                     value={mandatorySeconds}
-                    onChange={(e) => setMandatorySeconds(Number(e.target.value))}
+                    onChange={(e) => setMandatorySeconds(e.target.value)}
                     className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
                   />
                 </div>

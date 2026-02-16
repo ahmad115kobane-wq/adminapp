@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Trophy, Users, Shield, Swords,
   ShoppingBag, Package, Tags, Image, ClipboardList,
   Newspaper, SlidersHorizontal, FileText, Activity,
-  LogOut, UserCog, Store, Video,
+  LogOut, UserCog, Store, Video, Eye,
 } from "lucide-react";
 
 const navItems = [
@@ -18,6 +18,7 @@ const navItems = [
   { label: "البطولات", href: "/competitions", icon: Trophy },
   { label: "المستخدمون", href: "/users", icon: Users },
   { label: "المشغلون", href: "/operators", icon: UserCog },
+  { label: "المشرفون", href: "/supervisors", icon: Eye },
   { label: "divider", href: "", icon: Store },
   { label: "المنتجات", href: "/store/products", icon: Package },
   { label: "الأقسام", href: "/store/categories", icon: Tags },

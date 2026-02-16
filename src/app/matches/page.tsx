@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { matchApi, teamApi, adminApi } from "@/lib/api";
+import { matchApi, teamApi, adminApi, supervisorApi, refereeApi } from "@/lib/api";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/utils";
 import { Plus, Pencil, Trash2, Search, Radio, X } from "lucide-react";
@@ -11,6 +11,8 @@ export default function MatchesPage() {
   const [teams, setTeams] = useState<any[]>([]);
   const [competitions, setCompetitions] = useState<any[]>([]);
   const [operators, setOperators] = useState<any[]>([]);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
+  const [referees, setReferees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -19,17 +21,21 @@ export default function MatchesPage() {
     competitionId: "", homeTeamId: "", awayTeamId: "",
     date: "", hour: "06", minute: "00", ampm: "م",
     venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "",
+    supervisorId: "", refereeId: "", assistantReferee1Id: "", assistantReferee2Id: "", fourthRefereeId: "",
   });
 
   const load = useCallback(async () => {
     try {
-      const [mRes, tRes, cRes, oRes] = await Promise.all([
+      const [mRes, tRes, cRes, oRes, sRes, rRes] = await Promise.all([
         matchApi.getAll(), teamApi.getAll(), adminApi.getCompetitions(), adminApi.getOperators(),
+        supervisorApi.getAll({ active: 'true' }), refereeApi.getAll({ active: 'true' }),
       ]);
       setMatches(mRes.data.data || []);
       setTeams(tRes.data.data || []);
       setCompetitions(cRes.data.data || []);
       setOperators(oRes.data.data || []);
+      setSupervisors(sRes.data.data || []);
+      setReferees(rRes.data.data || []);
     } catch { toast.error("فشل تحميل البيانات"); }
     finally { setLoading(false); }
   }, []);
@@ -46,7 +52,7 @@ export default function MatchesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ competitionId: "", homeTeamId: "", awayTeamId: "", date: "", hour: "06", minute: "00", ampm: "م", venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "" });
+    setForm({ competitionId: "", homeTeamId: "", awayTeamId: "", date: "", hour: "06", minute: "00", ampm: "م", venue: "", isFeatured: false, referee: "", matchday: "", season: "", operatorId: "", supervisorId: "", refereeId: "", assistantReferee1Id: "", assistantReferee2Id: "", fourthRefereeId: "" });
     setShowModal(true);
   };
 
@@ -66,6 +72,7 @@ export default function MatchesPage() {
       competitionId: m.competitionId || "", homeTeamId: m.homeTeamId || "", awayTeamId: m.awayTeamId || "",
       date, hour, minute, ampm,
       venue: m.venue || "", isFeatured: m.isFeatured || false, referee: m.referee || "", matchday: m.matchday || "", season: m.season || "", operatorId: "",
+      supervisorId: m.supervisorId || "", refereeId: m.refereeId || "", assistantReferee1Id: m.assistantReferee1Id || "", assistantReferee2Id: m.assistantReferee2Id || "", fourthRefereeId: m.fourthRefereeId || "",
     });
     setShowModal(true);
   };
@@ -88,6 +95,11 @@ export default function MatchesPage() {
         referee: form.referee || undefined,
         matchday: form.matchday || undefined,
         season: form.season || undefined,
+        supervisorId: form.supervisorId || undefined,
+        refereeId: form.refereeId || undefined,
+        assistantReferee1Id: form.assistantReferee1Id || undefined,
+        assistantReferee2Id: form.assistantReferee2Id || undefined,
+        fourthRefereeId: form.fourthRefereeId || undefined,
       };
       if (!editing && form.operatorId) payload.operatorId = form.operatorId;
 
@@ -259,8 +271,43 @@ export default function MatchesPage() {
                   <input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} placeholder="اسم الملعب" className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">الحكم</label>
-                  <input value={form.referee} onChange={(e) => setForm({ ...form, referee: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none" />
+                  <label className="mb-1 block text-xs text-gray-400">مشرف المباراة</label>
+                  <select value={form.supervisorId} onChange={(e) => setForm({ ...form, supervisorId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
+                    <option value="">بدون مشرف</option>
+                    {supervisors.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-400">الحكم الرئيسي</label>
+                  <select value={form.refereeId} onChange={(e) => setForm({ ...form, refereeId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
+                    <option value="">اختر الحكم...</option>
+                    {referees.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-400">الحكم المساعد الأول</label>
+                  <select value={form.assistantReferee1Id} onChange={(e) => setForm({ ...form, assistantReferee1Id: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
+                    <option value="">اختر...</option>
+                    {referees.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-400">الحكم المساعد الثاني</label>
+                  <select value={form.assistantReferee2Id} onChange={(e) => setForm({ ...form, assistantReferee2Id: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
+                    <option value="">اختر...</option>
+                    {referees.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-400">الحكم الرابع</label>
+                  <select value={form.fourthRefereeId} onChange={(e) => setForm({ ...form, fourthRefereeId: e.target.value })} className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none">
+                    <option value="">اختر...</option>
+                    {referees.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
