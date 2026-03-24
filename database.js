@@ -1,18 +1,11 @@
 /**
  * Database Manager - إدارة قاعدة البيانات
- * sql.js (SQLite نقي بـ JavaScript — بدون compilation)
+ * PostgreSQL via pg (node-postgres)
  * جداول: users, subscriptions, sessions, plans
  */
-const initSqlJs = require('sql.js');
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-
-const crypto = require('crypto');
-
-const DATA_DIR = path.join(__dirname, 'data');
-const DB_PATH = path.join(DATA_DIR, 'apptv.db');
 
 // توليد مفتاح ترخيص فريد
 function generateLicenseKey() {
@@ -28,79 +21,40 @@ function generateLicenseKey() {
     return segments.join('-');
 }
 
-let db = null;
-let saveTimer = null;
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('railway.internal')
+        ? { rejectUnauthorized: false }
+        : false,
+});
 
-// ===================== Core DB =====================
+// ===================== Helper =====================
 
-function saveToDisk() {
-    if (!db) return;
-    try {
-        const data = db.export();
-        const buffer = Buffer.from(data);
-        fs.writeFileSync(DB_PATH, buffer);
-    } catch (e) {
-        console.error('[DB] خطأ في الحفظ:', e.message);
-    }
+async function query(sql, params = []) {
+    const res = await pool.query(sql, params);
+    return res;
 }
 
-// حفظ مؤجل (كل 2 ثانية كحد أقصى لتجنب الكتابة المتكررة)
-function scheduleSave() {
-    if (saveTimer) return;
-    saveTimer = setTimeout(() => {
-        saveToDisk();
-        saveTimer = null;
-    }, 2000);
+async function get(sql, params = []) {
+    const res = await pool.query(sql, params);
+    return res.rows[0] || null;
 }
 
-function run(sql, params = []) {
-    db.run(sql, params);
-    scheduleSave();
-    return { changes: db.getRowsModified() };
+async function all(sql, params = []) {
+    const res = await pool.query(sql, params);
+    return res.rows;
 }
 
-function get(sql, params = []) {
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    if (stmt.step()) {
-        const row = stmt.getAsObject();
-        stmt.free();
-        return row;
-    }
-    stmt.free();
-    return null;
-}
-
-function all(sql, params = []) {
-    const results = [];
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    while (stmt.step()) {
-        results.push(stmt.getAsObject());
-    }
-    stmt.free();
-    return results;
+async function run(sql, params = []) {
+    const res = await pool.query(sql, params);
+    return { changes: res.rowCount };
 }
 
 // ===================== Init =====================
 
 async function initDatabase() {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-
-    const SQL = await initSqlJs();
-
-    // تحميل قاعدة بيانات موجودة أو إنشاء جديدة
-    if (fs.existsSync(DB_PATH)) {
-        const fileBuffer = fs.readFileSync(DB_PATH);
-        db = new SQL.Database(fileBuffer);
-    } else {
-        db = new SQL.Database();
-    }
-
-    db.run('PRAGMA foreign_keys = ON');
-
     // إنشاء الجداول
-    db.run(`
+    await query(`
         CREATE TABLE IF NOT EXISTS plans (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -108,132 +62,115 @@ async function initDatabase() {
             duration_days INTEGER NOT NULL,
             price REAL NOT NULL DEFAULT 0,
             is_active INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);
-    db.run(`
+    await query(`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             license_key TEXT UNIQUE,
             max_devices INTEGER NOT NULL DEFAULT 1,
             is_blocked INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             notes TEXT DEFAULT ''
         )
     `);
-    db.run(`
+    await query(`
         CREATE TABLE IF NOT EXISTS subscriptions (
             id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            plan_id TEXT NOT NULL,
-            start_date TEXT NOT NULL DEFAULT (datetime('now')),
-            end_date TEXT NOT NULL,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            plan_id TEXT NOT NULL REFERENCES plans(id),
+            start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            end_date TIMESTAMPTZ NOT NULL,
             is_active INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (plan_id) REFERENCES plans(id)
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);
-    db.run(`
+    await query(`
         CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             token TEXT NOT NULL UNIQUE,
             device_id TEXT NOT NULL,
             device_info TEXT DEFAULT '',
             ip_address TEXT DEFAULT '',
-            last_check TEXT NOT NULL DEFAULT (datetime('now')),
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            is_active INTEGER NOT NULL DEFAULT 1,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            last_check TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            is_active INTEGER NOT NULL DEFAULT 1
         )
     `);
-    db.run(`
+    await query(`
         CREATE TABLE IF NOT EXISTS activity_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id TEXT,
             action TEXT NOT NULL,
             details TEXT DEFAULT '',
             ip_address TEXT DEFAULT '',
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     `);
 
-    // Migration: إضافة license_key للقواعد القديمة
-    try { db.run('ALTER TABLE users ADD COLUMN license_key TEXT'); } catch(e) {}
-
-    // توليد مفاتيح للمستخدمين بدون مفتاح
-    try {
-        const usersNoKey = all("SELECT id FROM users WHERE license_key IS NULL OR license_key = ''");
-        for (const u of usersNoKey) {
-            run('UPDATE users SET license_key = ? WHERE id = ?', [generateLicenseKey(), u.id]);
-        }
-    } catch(e) { console.log('[DB] Migration note:', e.message); }
-
     // فهارس
-    try { db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_license ON users(license_key)'); } catch(e) {}
-    db.run('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_subscriptions_active ON subscriptions(is_active, end_date)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+    await query('CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_subscriptions_active ON subscriptions(is_active, end_date)');
+    await query('CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)');
+    await query('CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active)');
+    await query('CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log(user_id)');
 
     // إضافة الباقات الافتراضية
-    const planCount = get('SELECT COUNT(*) as c FROM plans');
-    if (!planCount || planCount.c === 0) {
-        run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES (?, ?, ?, ?, ?)',
+    const planCount = await get('SELECT COUNT(*) as c FROM plans');
+    if (!planCount || parseInt(planCount.c) === 0) {
+        await run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES ($1, $2, $3, $4, $5)',
             ['plan_1d', '1 Day', 'يوم واحد', 1, 0]);
-        run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES (?, ?, ?, ?, ?)',
+        await run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES ($1, $2, $3, $4, $5)',
             ['plan_1m', '1 Month', 'شهر واحد', 30, 0]);
-        run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES (?, ?, ?, ?, ?)',
+        await run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES ($1, $2, $3, $4, $5)',
             ['plan_3m', '3 Months', '3 أشهر', 90, 0]);
-        run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES (?, ?, ?, ?, ?)',
+        await run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES ($1, $2, $3, $4, $5)',
             ['plan_7m', '7 Months', '7 أشهر', 210, 0]);
-        run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES (?, ?, ?, ?, ?)',
+        await run('INSERT INTO plans (id, name, name_ar, duration_days, price) VALUES ($1, $2, $3, $4, $5)',
             ['plan_1y', '1 Year', 'سنة كاملة', 365, 0]);
     }
 
-    saveToDisk();
-    console.log('[DB] قاعدة البيانات جاهزة');
-    return db;
+    console.log('[DB] قاعدة البيانات جاهزة (PostgreSQL)');
 }
 
 // ===================== Users =====================
 
-function createUser(username, password, maxDevices = 1, notes = '') {
+async function createUser(username, password, maxDevices = 1, notes = '') {
     const id = uuidv4();
     const passwordHash = bcrypt.hashSync(password, 12);
     const licenseKey = generateLicenseKey();
 
     try {
-        run(`INSERT INTO users (id, username, password_hash, license_key, max_devices, notes)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+        await run(`INSERT INTO users (id, username, password_hash, license_key, max_devices, notes)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
             [id, username.trim(), passwordHash, licenseKey, maxDevices, notes]);
 
         logActivity(id, 'USER_CREATED', `تم إنشاء المستخدم: ${username}`);
         return { success: true, userId: id, licenseKey };
     } catch (err) {
-        if (err.message && err.message.includes('UNIQUE')) {
+        if (err.message && (err.message.includes('unique') || err.message.includes('duplicate'))) {
             return { success: false, error: 'اسم المستخدم موجود مسبقاً' };
         }
         return { success: false, error: err.message };
     }
 }
 
-function getUser(userId) {
-    return get('SELECT * FROM users WHERE id = ?', [userId]);
+async function getUser(userId) {
+    return get('SELECT * FROM users WHERE id = $1', [userId]);
 }
 
-function getUserByUsername(username) {
-    return get('SELECT * FROM users WHERE username = ? COLLATE NOCASE', [username]);
+async function getUserByUsername(username) {
+    return get('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
 }
 
-function getAllUsers() {
+async function getAllUsers() {
     return all(`
         SELECT u.*,
             (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.is_active = 1) as active_devices,
@@ -248,53 +185,54 @@ function getAllUsers() {
     `);
 }
 
-function updateUser(userId, updates) {
+async function updateUser(userId, updates) {
     const fields = [];
     const values = [];
+    let paramIndex = 1;
 
     if (updates.max_devices !== undefined) {
-        fields.push('max_devices = ?');
+        fields.push(`max_devices = $${paramIndex++}`);
         values.push(updates.max_devices);
     }
     if (updates.is_blocked !== undefined) {
-        fields.push('is_blocked = ?');
+        fields.push(`is_blocked = $${paramIndex++}`);
         values.push(updates.is_blocked ? 1 : 0);
     }
     if (updates.password) {
-        fields.push('password_hash = ?');
+        fields.push(`password_hash = $${paramIndex++}`);
         values.push(bcrypt.hashSync(updates.password, 12));
     }
     if (updates.notes !== undefined) {
-        fields.push('notes = ?');
+        fields.push(`notes = $${paramIndex++}`);
         values.push(updates.notes);
     }
 
     if (fields.length === 0) return { success: false, error: 'لا توجد تحديثات' };
 
-    fields.push("updated_at = datetime('now')");
+    fields.push('updated_at = NOW()');
     values.push(userId);
 
-    run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+    await run(`UPDATE users SET ${fields.join(', ')} WHERE id = $${paramIndex}`, values);
     logActivity(userId, 'USER_UPDATED', JSON.stringify(updates));
     return { success: true };
 }
 
-function deleteUser(userId) {
-    const user = getUser(userId);
+async function deleteUser(userId) {
+    const user = await getUser(userId);
     if (!user) return { success: false, error: 'المستخدم غير موجود' };
 
-    run('DELETE FROM sessions WHERE user_id = ?', [userId]);
-    run('DELETE FROM subscriptions WHERE user_id = ?', [userId]);
-    run('DELETE FROM users WHERE id = ?', [userId]);
+    await run('DELETE FROM sessions WHERE user_id = $1', [userId]);
+    await run('DELETE FROM subscriptions WHERE user_id = $1', [userId]);
+    await run('DELETE FROM users WHERE id = $1', [userId]);
     logActivity(null, 'USER_DELETED', `تم حذف: ${user.username}`);
     return { success: true };
 }
 
-function blockUser(userId, block = true) {
-    run("UPDATE users SET is_blocked = ?, updated_at = datetime('now') WHERE id = ?",
+async function blockUser(userId, block = true) {
+    await run('UPDATE users SET is_blocked = $1, updated_at = NOW() WHERE id = $2',
         [block ? 1 : 0, userId]);
     if (block) {
-        run('UPDATE sessions SET is_active = 0 WHERE user_id = ?', [userId]);
+        await run('UPDATE sessions SET is_active = 0 WHERE user_id = $1', [userId]);
     }
     logActivity(userId, block ? 'USER_BLOCKED' : 'USER_UNBLOCKED', '');
     return { success: true };
@@ -302,37 +240,37 @@ function blockUser(userId, block = true) {
 
 // ===================== Subscriptions =====================
 
-function createSubscription(userId, planId) {
-    const plan = get('SELECT * FROM plans WHERE id = ?', [planId]);
+async function createSubscription(userId, planId) {
+    const plan = await get('SELECT * FROM plans WHERE id = $1', [planId]);
     if (!plan) return { success: false, error: 'الباقة غير موجودة' };
 
-    run('UPDATE subscriptions SET is_active = 0 WHERE user_id = ?', [userId]);
+    await run('UPDATE subscriptions SET is_active = 0 WHERE user_id = $1', [userId]);
 
     const id = uuidv4();
     const startDate = new Date().toISOString();
     const endDate = new Date(Date.now() + plan.duration_days * 24 * 60 * 60 * 1000).toISOString();
 
-    run(`INSERT INTO subscriptions (id, user_id, plan_id, start_date, end_date, is_active)
-         VALUES (?, ?, ?, ?, ?, 1)`,
+    await run(`INSERT INTO subscriptions (id, user_id, plan_id, start_date, end_date, is_active)
+         VALUES ($1, $2, $3, $4, $5, 1)`,
         [id, userId, planId, startDate, endDate]);
 
     logActivity(userId, 'SUBSCRIPTION_CREATED', `باقة: ${plan.name_ar} | ينتهي: ${endDate}`);
     return { success: true, subscriptionId: id, endDate };
 }
 
-function getActiveSubscription(userId) {
+async function getActiveSubscription(userId) {
     return get(`
         SELECT s.*, p.name as plan_name, p.name_ar as plan_name_ar, p.duration_days
         FROM subscriptions s
         JOIN plans p ON s.plan_id = p.id
-        WHERE s.user_id = ? AND s.is_active = 1 AND s.end_date > datetime('now')
+        WHERE s.user_id = $1 AND s.is_active = 1 AND s.end_date > NOW()
         ORDER BY s.end_date DESC
         LIMIT 1
     `, [userId]);
 }
 
-function checkSubscriptionValid(userId) {
-    const sub = getActiveSubscription(userId);
+async function checkSubscriptionValid(userId) {
+    const sub = await getActiveSubscription(userId);
     if (!sub) return { valid: false, reason: 'لا يوجد اشتراك فعّال' };
 
     const now = new Date();
@@ -342,10 +280,10 @@ function checkSubscriptionValid(userId) {
     return { valid: true, subscription: sub, daysLeft, endDate: sub.end_date };
 }
 
-function cleanExpiredSubscriptions() {
-    const result = run(`
+async function cleanExpiredSubscriptions() {
+    const result = await run(`
         UPDATE subscriptions SET is_active = 0
-        WHERE is_active = 1 AND end_date <= datetime('now')
+        WHERE is_active = 1 AND end_date <= NOW()
     `);
     if (result.changes > 0) console.log(`[DB] تم إلغاء ${result.changes} اشتراك منتهي`);
     return result.changes;
@@ -353,70 +291,70 @@ function cleanExpiredSubscriptions() {
 
 // ===================== Sessions =====================
 
-function createSession(userId, token, deviceId, deviceInfo = '', ipAddress = '') {
-    const user = getUser(userId);
+async function createSession(userId, token, deviceId, deviceInfo = '', ipAddress = '') {
+    const user = await getUser(userId);
     if (!user) return { success: false, error: 'المستخدم غير موجود' };
 
-    const activeCount = get(
-        'SELECT COUNT(*) as c FROM sessions WHERE user_id = ? AND is_active = 1', [userId]
+    const activeCount = await get(
+        'SELECT COUNT(*) as c FROM sessions WHERE user_id = $1 AND is_active = 1', [userId]
     );
 
-    if (activeCount && activeCount.c >= user.max_devices) {
-        const oldest = get(
-            'SELECT id FROM sessions WHERE user_id = ? AND is_active = 1 ORDER BY last_check ASC LIMIT 1',
+    if (activeCount && parseInt(activeCount.c) >= user.max_devices) {
+        const oldest = await get(
+            'SELECT id FROM sessions WHERE user_id = $1 AND is_active = 1 ORDER BY last_check ASC LIMIT 1',
             [userId]
         );
-        if (oldest) run('DELETE FROM sessions WHERE id = ?', [oldest.id]);
+        if (oldest) await run('DELETE FROM sessions WHERE id = $1', [oldest.id]);
     }
 
     const id = uuidv4();
-    run(`INSERT INTO sessions (id, user_id, token, device_id, device_info, ip_address)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+    await run(`INSERT INTO sessions (id, user_id, token, device_id, device_info, ip_address)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [id, userId, token, deviceId, deviceInfo, ipAddress]);
 
     logActivity(userId, 'SESSION_CREATED', `جهاز: ${deviceInfo} | IP: ${ipAddress}`);
     return { success: true, sessionId: id };
 }
 
-function validateSession(token) {
-    const session = get(`
+async function validateSession(token) {
+    const session = await get(`
         SELECT s.*, u.username, u.is_blocked, u.max_devices
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.is_active = 1
+        WHERE s.token = $1 AND s.is_active = 1
     `, [token]);
 
     if (!session) return { valid: false, reason: 'جلسة غير صالحة' };
     if (session.is_blocked) return { valid: false, reason: 'الحساب محظور' };
 
-    run("UPDATE sessions SET last_check = datetime('now') WHERE id = ?", [session.id]);
+    await run('UPDATE sessions SET last_check = NOW() WHERE id = $1', [session.id]);
     return { valid: true, session };
 }
 
-function getActiveSessionCount(userId) {
-    const r = get('SELECT COUNT(*) as c FROM sessions WHERE user_id = ? AND is_active = 1', [userId]);
-    return r ? r.c : 0;
+async function getActiveSessionCount(userId) {
+    const r = await get('SELECT COUNT(*) as c FROM sessions WHERE user_id = $1 AND is_active = 1', [userId]);
+    return r ? parseInt(r.c) : 0;
 }
 
-function killSession(sessionId) {
-    run('UPDATE sessions SET is_active = 0 WHERE id = ?', [sessionId]);
+async function killSession(sessionId) {
+    await run('UPDATE sessions SET is_active = 0 WHERE id = $1', [sessionId]);
     return { success: true };
 }
 
-function killAllUserSessions(userId) {
-    run('UPDATE sessions SET is_active = 0 WHERE user_id = ?', [userId]);
+async function killAllUserSessions(userId) {
+    await run('UPDATE sessions SET is_active = 0 WHERE user_id = $1', [userId]);
     return { success: true };
 }
 
-function killSessionByToken(token) {
-    run('UPDATE sessions SET is_active = 0 WHERE token = ?', [token]);
+async function killSessionByToken(token) {
+    await run('UPDATE sessions SET is_active = 0 WHERE token = $1', [token]);
     return { success: true };
 }
 
-function cleanStaleSessions() {
-    const result = run(`
+async function cleanStaleSessions() {
+    const result = await run(`
         UPDATE sessions SET is_active = 0
-        WHERE is_active = 1 AND last_check < datetime('now', '-48 hours')
+        WHERE is_active = 1 AND last_check < NOW() - INTERVAL '48 hours'
     `);
     if (result.changes > 0) console.log(`[DB] تم إلغاء ${result.changes} جلسة قديمة`);
     return result.changes;
@@ -424,16 +362,16 @@ function cleanStaleSessions() {
 
 // ===================== License Verification =====================
 
-function getUserByLicenseKey(licenseKey) {
-    return get('SELECT * FROM users WHERE license_key = ?', [licenseKey]);
+async function getUserByLicenseKey(licenseKey) {
+    return get('SELECT * FROM users WHERE license_key = $1', [licenseKey]);
 }
 
-function verifyLicense(licenseKey) {
-    const user = getUserByLicenseKey(licenseKey);
+async function verifyLicense(licenseKey) {
+    const user = await getUserByLicenseKey(licenseKey);
     if (!user) return { valid: false, reason: 'مفتاح الترخيص غير صالح' };
     if (user.is_blocked) return { valid: false, reason: 'الحساب محظور' };
 
-    const sub = checkSubscriptionValid(user.id);
+    const sub = await checkSubscriptionValid(user.id);
     if (!sub.valid) return { valid: false, reason: sub.reason };
 
     return {
@@ -448,52 +386,54 @@ function verifyLicense(licenseKey) {
 
 // ===================== Plans =====================
 
-function getAllPlans() {
+async function getAllPlans() {
     return all('SELECT * FROM plans WHERE is_active = 1 ORDER BY duration_days ASC');
 }
 
-function getPlan(planId) {
-    return get('SELECT * FROM plans WHERE id = ?', [planId]);
+async function getPlan(planId) {
+    return get('SELECT * FROM plans WHERE id = $1', [planId]);
 }
 
 // ===================== Activity Log =====================
 
 function logActivity(userId, action, details = '', ipAddress = '') {
-    try {
-        run(`INSERT INTO activity_log (user_id, action, details, ip_address)
-             VALUES (?, ?, ?, ?)`,
-            [userId, action, details, ipAddress]);
-    } catch (e) {
-        // silent
-    }
+    // fire-and-forget — لا ننتظر النتيجة
+    run(`INSERT INTO activity_log (user_id, action, details, ip_address)
+         VALUES ($1, $2, $3, $4)`,
+        [userId, action, details, ipAddress]).catch(() => {});
 }
 
-function getActivityLog(limit = 100) {
+async function getActivityLog(limit = 100) {
     return all(`
         SELECT a.*, u.username
         FROM activity_log a
         LEFT JOIN users u ON a.user_id = u.id
         ORDER BY a.created_at DESC
-        LIMIT ?
+        LIMIT $1
     `, [limit]);
 }
 
 // ===================== Stats =====================
 
-function getStats() {
+async function getStats() {
+    const [totalUsers, activeUsers, blockedUsers, activeSubscriptions, activeSessions] = await Promise.all([
+        get('SELECT COUNT(*) as c FROM users'),
+        get('SELECT COUNT(*) as c FROM users WHERE is_blocked = 0'),
+        get('SELECT COUNT(*) as c FROM users WHERE is_blocked = 1'),
+        get("SELECT COUNT(*) as c FROM subscriptions WHERE is_active = 1 AND end_date > NOW()"),
+        get('SELECT COUNT(*) as c FROM sessions WHERE is_active = 1'),
+    ]);
     return {
-        totalUsers: (get('SELECT COUNT(*) as c FROM users') || { c: 0 }).c,
-        activeUsers: (get('SELECT COUNT(*) as c FROM users WHERE is_blocked = 0') || { c: 0 }).c,
-        blockedUsers: (get('SELECT COUNT(*) as c FROM users WHERE is_blocked = 1') || { c: 0 }).c,
-        activeSubscriptions: (get(
-            "SELECT COUNT(*) as c FROM subscriptions WHERE is_active = 1 AND end_date > datetime('now')"
-        ) || { c: 0 }).c,
-        activeSessions: (get('SELECT COUNT(*) as c FROM sessions WHERE is_active = 1') || { c: 0 }).c,
+        totalUsers: parseInt((totalUsers || { c: 0 }).c),
+        activeUsers: parseInt((activeUsers || { c: 0 }).c),
+        blockedUsers: parseInt((blockedUsers || { c: 0 }).c),
+        activeSubscriptions: parseInt((activeSubscriptions || { c: 0 }).c),
+        activeSessions: parseInt((activeSessions || { c: 0 }).c),
     };
 }
 
 module.exports = {
-    initDatabase, saveToDisk,
+    initDatabase,
     createUser, getUser, getUserByUsername, getAllUsers, updateUser, deleteUser, blockUser,
     createSubscription, getActiveSubscription, checkSubscriptionValid, cleanExpiredSubscriptions,
     createSession, validateSession, getActiveSessionCount, killSession, killAllUserSessions, killSessionByToken, cleanStaleSessions,

@@ -63,8 +63,8 @@ function getAdminSecret() {
 /**
  * تسجيل الدخول
  */
-function login(username, password, deviceId, deviceInfo = '', ipAddress = '') {
-    const user = db.getUserByUsername(username);
+async function login(username, password, deviceId, deviceInfo = '', ipAddress = '') {
+    const user = await db.getUserByUsername(username);
     if (!user) {
         db.logActivity(null, 'LOGIN_FAILED', `محاولة فاشلة: ${username}`, ipAddress);
         return { success: false, error: 'اسم المستخدم أو كلمة المرور خاطئة' };
@@ -81,7 +81,7 @@ function login(username, password, deviceId, deviceInfo = '', ipAddress = '') {
     }
 
     // فحص الاشتراك
-    const subCheck = db.checkSubscriptionValid(user.id);
+    const subCheck = await db.checkSubscriptionValid(user.id);
     if (!subCheck.valid) {
         db.logActivity(user.id, 'LOGIN_NO_SUB', '', ipAddress);
         return { success: false, error: 'لا يوجد اشتراك فعّال. تواصل مع الإدارة.' };
@@ -100,7 +100,7 @@ function login(username, password, deviceId, deviceInfo = '', ipAddress = '') {
     );
 
     // حفظ الجلسة
-    const sessionResult = db.createSession(user.id, token, deviceId, deviceInfo, ipAddress);
+    const sessionResult = await db.createSession(user.id, token, deviceId, deviceInfo, ipAddress);
     if (!sessionResult.success) {
         return { success: false, error: sessionResult.error };
     }
@@ -125,25 +125,25 @@ function login(username, password, deviceId, deviceInfo = '', ipAddress = '') {
 /**
  * التحقق من Token + الاشتراك + الجهاز
  */
-function verify(token, ipAddress = '') {
+async function verify(token, ipAddress = '') {
     try {
         // فك الـ token
         const decoded = jwt.verify(token, getSecret());
 
         // فحص الجلسة في قاعدة البيانات
-        const sessionCheck = db.validateSession(token);
+        const sessionCheck = await db.validateSession(token);
         if (!sessionCheck.valid) {
             return { valid: false, reason: sessionCheck.reason };
         }
 
         // فحص الاشتراك
-        const subCheck = db.checkSubscriptionValid(decoded.userId);
+        const subCheck = await db.checkSubscriptionValid(decoded.userId);
         if (!subCheck.valid) {
             return { valid: false, reason: subCheck.reason };
         }
 
         // فحص الحظر
-        const user = db.getUser(decoded.userId);
+        const user = await db.getUser(decoded.userId);
         if (!user || user.is_blocked) {
             return { valid: false, reason: 'الحساب محظور' };
         }
@@ -173,10 +173,10 @@ function verifyAdmin(adminKey) {
 /**
  * تسجيل الخروج
  */
-function logout(token) {
+async function logout(token) {
     try {
         const decoded = jwt.verify(token, getSecret(), { ignoreExpiration: true });
-        db.killSessionByToken(token);
+        await db.killSessionByToken(token);
         db.logActivity(decoded.userId, 'LOGOUT', '');
         return { success: true };
     } catch (e) {
