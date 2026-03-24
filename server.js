@@ -342,8 +342,14 @@ app.post('/api/license/auth', async (req, res) => {
 
 // ===================== Health Check =====================
 
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, status: 'running', time: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+    const dbOk = await db.testConnection();
+    res.json({
+        success: true,
+        status: 'running',
+        database: dbOk ? 'connected' : 'disconnected',
+        time: new Date().toISOString()
+    });
 });
 
 // ===================== Cleanup Scheduler =====================

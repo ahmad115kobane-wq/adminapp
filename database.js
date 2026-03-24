@@ -21,18 +21,49 @@ function generateLicenseKey() {
     return segments.join('-');
 }
 
+// التحقق من وجود DATABASE_URL
+if (!process.env.DATABASE_URL) {
+    console.error('[DB] ⚠️  DATABASE_URL غير موجود! يجب تعيين متغير البيئة DATABASE_URL');
+    console.error('[DB] مثال: DATABASE_URL=postgresql://user:pass@host:5432/dbname');
+}
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('railway.internal')
         ? { rejectUnauthorized: false }
         : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+});
+
+pool.on('error', (err) => {
+    console.error('[DB] خطأ غير متوقع في الاتصال بقاعدة البيانات:', err.message);
 });
 
 // ===================== Helper =====================
 
+async function testConnection() {
+    try {
+        const client = await pool.connect();
+        const res = await client.query('SELECT NOW() as now');
+        client.release();
+        console.log(`[DB] ✅ اتصال PostgreSQL ناجح — ${res.rows[0].now}`);
+        return true;
+    } catch (err) {
+        console.error(`[DB] ❌ فشل الاتصال بـ PostgreSQL: ${err.message}`);
+        return false;
+    }
+}
+
 async function query(sql, params = []) {
-    const res = await pool.query(sql, params);
-    return res;
+    try {
+        const res = await pool.query(sql, params);
+        return res;
+    } catch (err) {
+        console.error(`[DB] خطأ في الاستعلام: ${err.message} | SQL: ${sql.substring(0, 80)}`);
+        throw err;
+    }
 }
 
 async function get(sql, params = []) {
@@ -53,6 +84,13 @@ async function run(sql, params = []) {
 // ===================== Init =====================
 
 async function initDatabase() {
+    // اختبار الاتصال أولاً
+    const connected = await testConnection();
+    if (!connected) {
+        console.error('[DB] ❌ لا يمكن الاتصال بقاعدة البيانات — تأكد من DATABASE_URL');
+        throw new Error('فشل الاتصال بقاعدة البيانات PostgreSQL');
+    }
+
     // إنشاء الجداول
     await query(`
         CREATE TABLE IF NOT EXISTS plans (
@@ -433,7 +471,7 @@ async function getStats() {
 }
 
 module.exports = {
-    initDatabase,
+    initDatabase, testConnection,
     createUser, getUser, getUserByUsername, getAllUsers, updateUser, deleteUser, blockUser,
     createSubscription, getActiveSubscription, checkSubscriptionValid, cleanExpiredSubscriptions,
     createSession, validateSession, getActiveSessionCount, killSession, killAllUserSessions, killSessionByToken, cleanStaleSessions,
