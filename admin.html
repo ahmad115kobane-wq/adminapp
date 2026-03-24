@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>يلا شاهد - لوحة تحكم الأدمن</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='108' fill='%230B0D17'/%3E%3Cpath d='M196 148 L372 256 L196 364Z' fill='%23D4A853'/%3E%3C/svg%3E" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0B0D17; --bg2: #111425; --bg3: #161A2C; --bg4: #1E2340;
+            --gold: #D4A853; --gold-d: #B8922F; --gold-l: #E8C777;
+            --green: #34D399; --red: #EF4444; --blue: #3B82F6; --purple: #8B5CF6;
+            --txt: #F1F5F9; --txt2: #94A3B8; --txt3: #475569;
+            --border: rgba(255,255,255,0.08);
+        }
+        body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+
+        /* Auth Screen */
+        #authScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .auth-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 380px; text-align: center; }
+        .auth-box h2 { color: var(--gold); margin-bottom: 8px; font-size: 1.6em; }
+        .auth-box p { color: var(--txt2); margin-bottom: 24px; font-size: 0.9em; }
+        .auth-box input { width: 100%; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--txt); font-family: inherit; font-size: 1em; outline: none; margin-bottom: 16px; text-align: center; letter-spacing: 2px; }
+        .auth-box input:focus { border-color: var(--gold); }
+        .auth-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--gold), var(--gold-d)); color: var(--bg); border: none; border-radius: 10px; font-family: inherit; font-size: 1.05em; font-weight: 700; cursor: pointer; }
+        .auth-box .err { color: var(--red); font-size: 0.85em; margin-top: 8px; display: none; }
+
+        /* Main Layout */
+        #mainApp { display: none; }
+        .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 16px 30px; display: flex; align-items: center; justify-content: space-between; }
+        .header-title { display: flex; align-items: center; gap: 12px; }
+        .header-title .icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--gold), var(--gold-d)); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .header-title .icon svg { width: 20px; height: 20px; }
+        .header-title h1 { font-size: 1.3em; font-weight: 700; }
+        .header-title h1 span { color: var(--gold); }
+        .header-actions { display: flex; gap: 10px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; font-family: inherit; font-size: 0.9em; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-d)); color: var(--bg); }
+        .btn-green { background: var(--green); color: var(--bg); }
+        .btn-red { background: var(--red); color: #fff; }
+        .btn-blue { background: var(--blue); color: #fff; }
+        .btn-purple { background: var(--purple); color: #fff; }
+        .btn-ghost { background: rgba(255,255,255,0.06); color: var(--txt2); border: 1px solid var(--border); }
+        .btn-sm { padding: 5px 10px; font-size: 0.8em; }
+
+        /* Content */
+        .content { max-width: 1300px; margin: 0 auto; padding: 24px 30px; }
+
+        /* Stats */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .stat-card .label { font-size: 0.85em; color: var(--txt2); margin-bottom: 6px; }
+        .stat-card .value { font-size: 2em; font-weight: 800; }
+        .stat-card .value.gold { color: var(--gold); }
+        .stat-card .value.green { color: var(--green); }
+        .stat-card .value.red { color: var(--red); }
+        .stat-card .value.blue { color: var(--blue); }
+
+        /* Section */
+        .section { background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 24px; overflow: hidden; }
+        .section-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .section-header h2 { font-size: 1.1em; font-weight: 700; }
+
+        /* Table */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 12px 16px; text-align: right; font-size: 0.82em; font-weight: 600; color: var(--txt2); background: var(--bg2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.9em; white-space: nowrap; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.78em; font-weight: 600; }
+        .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
+        .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge-yellow { background: rgba(251,191,36,0.15); color: #FBBF24; }
+        .badge-gray { background: rgba(148,163,184,0.15); color: var(--txt2); }
+        .license-key { font-family: 'Consolas', monospace; font-size: 0.85em; background: var(--bg); padding: 4px 8px; border-radius: 6px; cursor: pointer; user-select: all; letter-spacing: 1px; color: var(--gold-l); }
+
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; display: none; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--bg3); border: 1px solid var(--border); border-radius: 16px; padding: 30px; width: 440px; max-width: 95vw; }
+        .modal h3 { color: var(--gold); margin-bottom: 20px; font-size: 1.2em; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 0.85em; color: var(--txt2); }
+        .form-group input, .form-group select { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--txt); font-family: inherit; font-size: 0.95em; outline: none; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        /* Activity */
+        .activity-item { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 0.85em; display: flex; gap: 12px; align-items: center; }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-time { color: var(--txt3); min-width: 130px; font-size: 0.8em; }
+        .activity-action { font-weight: 600; min-width: 140px; }
+        .activity-detail { color: var(--txt2); flex: 1; }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 10px; font-size: 0.9em; font-weight: 600; z-index: 200; animation: slideUp 0.3s; }
+        .toast-success { background: var(--green); color: var(--bg); }
+        .toast-error { background: var(--red); color: #fff; }
+        @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg2); }
+        ::-webkit-scrollbar-thumb { background: var(--txt3); border-radius: 3px; }
+
+        .empty-state { padding: 40px; text-align: center; color: var(--txt3); }
+    </style>
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="authScreen">
+        <div class="auth-box">
+            <h2>لوحة التحكم</h2>
+            <p>أدخل مفتاح الأدمن للمتابعة</p>
+            <input type="password" id="adminKeyInput" placeholder="مفتاح الأدمن" />
+            <button onclick="doAuth()">دخول</button>
+            <div class="err" id="authErr"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp">
+        <div class="header">
+            <div class="header-title">
+                <div class="icon"><svg viewBox="0 0 24 24" fill="none"><polygon points="8,5 19,12 8,19" fill="#0B0D17"/></svg></div>
+                <h1><span>يلا شاهد</span> — لوحة التحكم</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-gold" onclick="openAddModal()">+ إضافة وكيل</button>
+                <button class="btn btn-ghost" onclick="refreshAll()">تحديث</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Stats -->
+            <div class="stats">
+                <div class="stat-card"><div class="label">إجمالي الوكلاء</div><div class="value gold" id="statTotal">0</div></div>
+                <div class="stat-card"><div class="label">اشتراكات فعّالة</div><div class="value green" id="statActive">0</div></div>
+                <div class="stat-card"><div class="label">محظورين</div><div class="value red" id="statBlocked">0</div></div>
+                <div class="stat-card"><div class="label">أجهزة متصلة</div><div class="value blue" id="statSessions">0</div></div>
+            </div>
+
+            <!-- Agents Table -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>الوكلاء</h2>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>اسم المستخدم</th>
+                                <th>مفتاح الترخيص</th>
+                                <th>الباقة</th>
+                                <th>ينتهي في</th>
+                                <th>أجهزة</th>
+                                <th>الحالة</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentsBody"></tbody>
+                    </table>
+                    <div class="empty-state" id="emptyState">لا يوجد وكلاء — أضف وكيل جديد</div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>سجل النشاط</h2>
+                    <button class="btn btn-ghost btn-sm" onclick="loadActivity()">تحديث</button>
+                </div>
+                <div id="activityList" style="max-height:350px;overflow-y:auto;">
+                    <div class="empty-state">جاري التحميل...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Renew Modal -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <h3 id="modalTitle">إضافة وكيل جديد</h3>
+            <input type="hidden" id="editUserId" />
+            <div id="addFields">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" id="fUsername" placeholder="مثال: agent1" />
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="text" id="fPassword" placeholder="كلمة مرور قوية" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>الباقة</label>
+                    <select id="fPlan">
+                        <option value="plan_1m">شهر واحد</option>
+                        <option value="plan_3m">3 أشهر</option>
+                        <option value="plan_7m">7 أشهر</option>
+                        <option value="plan_1y">سنة كاملة</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>عدد الأجهزة</label>
+                    <input type="number" id="fDevices" value="1" min="1" max="50" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModal('addModal')">إلغاء</button>
+                <button class="btn btn-gold" id="modalSubmitBtn" onclick="submitAgent()">إنشاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- License Key Modal -->
+    <div class="modal-overlay" id="licenseModal">
+        <div class="modal" style="text-align:center;">
+            <h3>مفتاح الترخيص</h3>
+            <p style="color:var(--txt2);margin-bottom:16px;">أرسل هذا المفتاح للوكيل ليضعه في إعدادات السيرفر</p>
+            <div class="license-key" style="font-size:1.3em;padding:16px;display:inline-block;margin-bottom:16px;" id="licenseKeyDisplay"></div>
+            <br>
+            <button class="btn btn-gold" onclick="copyLicense()">نسخ المفتاح</button>
+            <button class="btn btn-ghost" onclick="closeModal('licenseModal')" style="margin-right:10px;">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        let ADMIN_KEY = '';
+        const API = '';
+
+        // ===== Auth =====
+        function doAuth() {
+            const key = document.getElementById('adminKeyInput').value.trim();
+            if (!key) return;
+            ADMIN_KEY = key;
+            apiGet('/api/admin/stats').then(d => {
+                if (d.success) {
+                    sessionStorage.setItem('admin_key', key);
+                    document.getElementById('authScreen').style.display = 'none';
+                    document.getElementById('mainApp').style.display = 'block';
+                    refreshAll();
+                } else {
+                    showAuthErr('مفتاح غير صحيح');
+                }
+            }).catch(() => showAuthErr('فشل الاتصال'));
+        }
+        function showAuthErr(msg) {
+            const el = document.getElementById('authErr');
+            el.textContent = msg; el.style.display = 'block';
+        }
+        document.getElementById('adminKeyInput').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
+
+        // Auto-login
+        const saved = sessionStorage.getItem('admin_key');
+        if (saved) { ADMIN_KEY = saved; document.getElementById('adminKeyInput').value = saved; doAuth(); }
+
+        // ===== API =====
+        function apiGet(path) {
+            return fetch(API + path, { headers: { 'X-Admin-Key': ADMIN_KEY } }).then(r => r.json());
+        }
+        function apiPost(path, data) {
+            return fetch(API + path, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+                body: JSON.stringify(data)
+            }).then(r => r.json());
+        }
+        function apiDelete(path) {
+            return fetch(API + path, { method: 'DELETE', headers: { 'X-Admin-Key': ADMIN_KEY } }).then(r => r.json());
+        }
+        function apiPut(path, data) {
+            return fetch(API + path, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+                body: JSON.stringify(data)
+            }).then(r => r.json());
+        }
+
+        // ===== Refresh =====
+        function refreshAll() { loadStats(); loadAgents(); loadActivity(); }
+
+        function loadStats() {
+            apiGet('/api/admin/stats').then(d => {
+                if (!d.success) return;
+                document.getElementById('statTotal').textContent = d.stats.totalUsers;
+                document.getElementById('statActive').textContent = d.stats.activeSubscriptions;
+                document.getElementById('statBlocked').textContent = d.stats.blockedUsers;
+                document.getElementById('statSessions').textContent = d.stats.activeSessions;
+            });
+        }
+
+        function loadAgents() {
+            apiGet('/api/admin/users').then(d => {
+                if (!d.success) return;
+                const tbody = document.getElementById('agentsBody');
+                const empty = document.getElementById('emptyState');
+                tbody.innerHTML = '';
+                if (d.users.length === 0) { empty.style.display = 'block'; return; }
+                empty.style.display = 'none';
+
+                d.users.forEach(u => {
+                    const endDate = u.subscription_end;
+                    let statusBadge = '';
+                    if (u.is_blocked) {
+                        statusBadge = '<span class="badge badge-red">محظور</span>';
+                    } else if (endDate) {
+                        const end = new Date(endDate);
+                        if (end > new Date()) {
+                            const days = Math.ceil((end - new Date()) / 86400000);
+                            statusBadge = '<span class="badge badge-green">فعّال (' + days + ' يوم)</span>';
+                        } else {
+                            statusBadge = '<span class="badge badge-yellow">منتهي</span>';
+                        }
+                    } else {
+                        statusBadge = '<span class="badge badge-gray">بدون اشتراك</span>';
+                    }
+
+                    const endDisplay = endDate ? endDate.substring(0, 10) : '—';
+                    const created = u.created_at ? u.created_at.substring(0, 10) : '';
+                    const licKey = u.license_key || '—';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${esc(u.username)}</strong></td>
+                        <td><span class="license-key" title="انقر للنسخ" onclick="copyText('${esc(licKey)}')">${esc(licKey)}</span></td>
+                        <td>${esc(u.plan_name || '—')}</td>
+                        <td>${endDisplay}</td>
+                        <td>${u.active_devices || 0} / ${u.max_devices}</td>
+                        <td>${statusBadge}</td>
+                        <td>${created}</td>
+                        <td>
+                            <button class="btn btn-blue btn-sm" onclick="renewAgent('${u.id}')">تجديد</button>
+                            ${u.is_blocked
+                                ? `<button class="btn btn-green btn-sm" onclick="toggleBlock('${u.id}',false)">فك حظر</button>`
+                                : `<button class="btn btn-red btn-sm" onclick="toggleBlock('${u.id}',true)">حظر</button>`
+                            }
+                            <button class="btn btn-ghost btn-sm" onclick="kickAgent('${u.id}')">قطع</button>
+                            <button class="btn btn-red btn-sm" onclick="deleteAgent('${u.id}','${esc(u.username)}')">حذف</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function loadActivity() {
+            apiGet('/api/admin/activity?limit=50').then(d => {
+                if (!d.success) return;
+                const list = document.getElementById('activityList');
+                if (d.log.length === 0) { list.innerHTML = '<div class="empty-state">لا توجد أنشطة</div>'; return; }
+                list.innerHTML = d.log.map(a => `
+                    <div class="activity-item">
+                        <span class="activity-time">${a.created_at ? a.created_at.replace('T',' ').substring(0,19) : ''}</span>
+                        <span class="activity-action">${esc(a.action)}</span>
+                        <span class="activity-detail">${esc(a.username || '')} ${esc(a.details || '')}</span>
+                    </div>
+                `).join('');
+            });
+        }
+
+        // ===== Agent Actions =====
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'إضافة وكيل جديد';
+            document.getElementById('addFields').style.display = 'block';
+            document.getElementById('editUserId').value = '';
+            document.getElementById('fUsername').value = '';
+            document.getElementById('fPassword').value = '';
+            document.getElementById('fPlan').value = 'plan_1m';
+            document.getElementById('fDevices').value = '1';
+            document.getElementById('modalSubmitBtn').textContent = 'إنشاء';
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function renewAgent(id) {
+            document.getElementById('modalTitle').textContent = 'تجديد اشتراك';
+            document.getElementById('addFields').style.display = 'none';
+            document.getElementById('editUserId').value = id;
+            document.getElementById('fPlan').value = 'plan_1m';
+            document.getElementById('modalSubmitBtn').textContent = 'تجديد';
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function submitAgent() {
+            const userId = document.getElementById('editUserId').value;
+            if (userId) {
+                // Renew
+                const plan = document.getElementById('fPlan').value;
+                apiPost(`/api/admin/users/${userId}/subscribe`, { plan_id: plan }).then(d => {
+                    if (d.success) { toast('تم تجديد الاشتراك'); closeModal('addModal'); refreshAll(); }
+                    else toast(d.error || 'خطأ', true);
+                });
+            } else {
+                // Create
+                const username = document.getElementById('fUsername').value.trim();
+                const password = document.getElementById('fPassword').value.trim();
+                const plan = document.getElementById('fPlan').value;
+                const devices = parseInt(document.getElementById('fDevices').value) || 1;
+                if (!username || !password) { toast('أدخل اسم المستخدم وكلمة المرور', true); return; }
+                if (username.length < 3) { toast('اسم المستخدم 3 أحرف على الأقل', true); return; }
+                if (password.length < 4) { toast('كلمة المرور 4 أحرف على الأقل', true); return; }
+
+                apiPost('/api/admin/users', { username, password, max_devices: devices, plan_id: plan }).then(d => {
+                    if (d.success) {
+                        closeModal('addModal');
+                        refreshAll();
+                        // Show license key
+                        if (d.licenseKey) {
+                            showLicenseKey(d.licenseKey);
+                        } else {
+                            toast('تم إنشاء الوكيل');
+                        }
+                    } else {
+                        toast(d.error || 'خطأ', true);
+                    }
+                });
+            }
+        }
+
+        function toggleBlock(id, block) {
+            const action = block ? 'block' : 'unblock';
+            if (!confirm(block ? 'حظر هذا الوكيل؟' : 'فك حظر هذا الوكيل؟')) return;
+            apiPost(`/api/admin/users/${id}/${action}`).then(d => {
+                if (d.success) { toast(block ? 'تم الحظر' : 'تم فك الحظر'); refreshAll(); }
+                else toast(d.error || 'خطأ', true);
+            });
+        }
+
+        function deleteAgent(id, name) {
+            if (!confirm(`حذف الوكيل "${name}" نهائياً؟`)) return;
+            apiDelete(`/api/admin/users/${id}`).then(d => {
+                if (d.success) { toast('تم الحذف'); refreshAll(); }
+                else toast(d.error || 'خطأ', true);
+            });
+        }
+
+        function kickAgent(id) {
+            apiPost(`/api/admin/users/${id}/kick`).then(d => {
+                if (d.success) { toast('تم قطع الاتصال'); refreshAll(); }
+                else toast(d.error || 'خطأ', true);
+            });
+        }
+
+        function showLicenseKey(key) {
+            document.getElementById('licenseKeyDisplay').textContent = key;
+            document.getElementById('licenseModal').classList.add('active');
+        }
+
+        function copyLicense() {
+            const key = document.getElementById('licenseKeyDisplay').textContent;
+            copyText(key);
+        }
+
+        // ===== Helpers =====
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => toast('تم النسخ')).catch(() => {});
+        }
+        function toast(msg, isError) {
+            const el = document.createElement('div');
+            el.className = 'toast ' + (isError ? 'toast-error' : 'toast-success');
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2500);
+        }
+
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(el => {
+            el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+        });
+    </script>
+</body>
+</html>

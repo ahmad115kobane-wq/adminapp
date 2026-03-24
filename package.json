@@ -1,0 +1,24 @@
+{
+  "name": "apptv-backend",
+  "version": "1.0.0",
+  "description": "IPTV Server - Subscription Management Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sql.js": "^1.10.2",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "crypto-js": "^4.2.0",
+    "uuid": "^9.0.0"
+  }
+}
