@@ -302,7 +302,7 @@ app.post('/api/license/verify', async (req, res) => {
 
 app.post('/api/license/auth', async (req, res) => {
     try {
-        const { username, password, server_info } = req.body;
+        const { username, password, server_info, device_id } = req.body;
         if (!username || !password) {
             return res.status(400).json({ success: false, error: 'اسم المستخدم وكلمة المرور مطلوبان' });
         }
@@ -325,7 +325,14 @@ app.post('/api/license/auth', async (req, res) => {
             db.logActivity(user.id, 'LICENSE_AUTH_EXPIRED', `User: ${username} | ${sub.reason} | IP: ${getClientIp(req)}`, getClientIp(req));
             return res.json({ success: true, valid: false, reason: sub.reason });
         }
-        db.logActivity(user.id, 'LICENSE_AUTH_OK', `User: ${username} | Plan: ${sub.subscription.plan_name_ar} | IP: ${getClientIp(req)} | ${server_info || ''}`, getClientIp(req));
+
+        // إنشاء جلسة — سيتم حذف أقدم جلسة تلقائياً عند تجاوز max_devices
+        const crypto = require('crypto');
+        const sessionToken = crypto.randomBytes(32).toString('hex');
+        const devId = device_id || crypto.randomBytes(16).toString('hex');
+        const sessionResult = await db.createSession(user.id, sessionToken, devId, server_info || '', getClientIp(req));
+
+        db.logActivity(user.id, 'LICENSE_AUTH_OK', `User: ${username} | Plan: ${sub.subscription.plan_name_ar} | Device: ${devId} | IP: ${getClientIp(req)} | ${server_info || ''}`, getClientIp(req));
         res.json({
             success: true,
             valid: true,
@@ -333,10 +340,40 @@ app.post('/api/license/auth', async (req, res) => {
             plan: sub.subscription.plan_name_ar,
             daysLeft: sub.daysLeft,
             endDate: sub.endDate,
-            maxDevices: user.max_devices
+            maxDevices: user.max_devices,
+            session_token: sessionToken
         });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// فحص صلاحية جلسة الوكيل (يُستدعى دورياً من server.py)
+app.post('/api/license/check', async (req, res) => {
+    try {
+        const { session_token } = req.body;
+        if (!session_token) {
+            return res.status(400).json({ valid: false, reason: 'session_token مطلوب' });
+        }
+        const result = await db.validateSession(session_token);
+        if (!result.valid) {
+            return res.json({ valid: false, reason: result.reason });
+        }
+        // فحص الاشتراك أيضاً
+        const sub = await db.checkSubscriptionValid(result.session.user_id);
+        if (!sub.valid) {
+            return res.json({ valid: false, reason: sub.reason });
+        }
+        res.json({
+            valid: true,
+            username: result.session.username,
+            plan: sub.subscription.plan_name_ar,
+            daysLeft: sub.daysLeft,
+            endDate: sub.endDate,
+            maxDevices: result.session.max_devices
+        });
+    } catch (e) {
+        res.status(500).json({ valid: false, reason: e.message });
     }
 });
 
